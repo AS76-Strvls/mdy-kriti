@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Προβολέας — ΜΔΥ Κρήτη 2026</title>
+<style>
+  :root{--spk:#4b6b2a;--spkd:#37501f;--spkl:#5f8535;--ink:#1c2417;--muted:#6d7a5c;--line:#d5ddc7;
+        --bg:#eef2e6;--paper:#fff;--calc:#fff6df;--ok:#2e6b1f;--okbg:#e1efd6;--red:#b23b3b;--redbg:#f6dede;--amber:#8a5a12;--amberbg:#fde7c4;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Roboto,system-ui,sans-serif;padding:0 0 44px}
+  .top{background:linear-gradient(180deg,var(--spkl),var(--spk));color:#fff;padding:14px 16px 16px;position:sticky;top:0;z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  .top h1{margin:0;font-size:15px}
+  .top .sub{font-size:11.5px;opacity:.9;margin-top:1px}
+  .cash{display:flex;gap:8px;margin-top:12px}
+  .cash .box{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 4px;text-align:center}
+  .cash .k{font-size:10px;opacity:.92;text-transform:uppercase;letter-spacing:.03em}
+  .cash .v{font-size:16px;font-weight:800;margin-top:2px}
+  .cash .box.big{background:#fff;color:var(--spkd)} .cash .box.big .k{color:var(--spkl)} .cash .box.big .v{font-size:19px}
+  .loan{margin-top:10px;border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:700;text-align:center}
+  .loan.safe{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3)}
+  .loan.warn{background:#fff2d6;color:#8a5a12}
+  .loan .barw{height:7px;border-radius:4px;background:rgba(255,255,255,.25);margin-top:6px;overflow:hidden;position:relative}
+  .loan .barw > i{display:block;height:100%;background:#fff}
+  .loan .barw .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffd27a}
+  .wrap{max-width:640px;margin:0 auto;padding:13px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;margin-bottom:13px;overflow:hidden;box-shadow:0 3px 10px rgba(40,55,25,.05)}
+  .card h2{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 14px 6px;display:flex;justify-content:space-between}
+  .qc{padding:4px 14px 14px}
+  .qc .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .qc input{font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;width:92px;background:#fbfcf8}
+  .qc .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .qc .seg button{border:0;background:#fbfcf8;padding:9px 10px;font-size:13px;color:var(--ink)}
+  .qc .seg button.on{background:var(--spk);color:#fff;font-weight:700}
+  .qc .out{margin-top:11px;font-size:15px;padding:11px 12px;border-radius:10px;background:var(--calc);border:1px solid #e7c766;line-height:1.5}
+  .qc .out b{font-size:19px}
+  .pill{display:inline-block;font-weight:800;padding:2px 10px;border-radius:20px;font-size:13px}
+  .pill.ok{background:var(--okbg);color:var(--ok)} .pill.no{background:var(--redbg);color:var(--red)}
+  .cat{border-top:1px solid var(--line);padding:10px 14px} .cat:first-of-type{border-top:0}
+  .cat .hd{display:flex;align-items:center;gap:10px}
+  .cat .nm{flex:1;font-weight:600;font-size:14px}
+  .cat .nm small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:2px}
+  .cat .amt{text-align:right;font-variant-numeric:tabular-nums;min-width:84px}
+  .cat .amt .sp{font-weight:800;font-size:15px;color:var(--spkd)}
+  .tap{font-size:11px;color:var(--spkl);font-weight:700}
+  .cat .add{margin-top:9px;display:none;gap:6px;flex-wrap:wrap} .cat.open .add{display:flex}
+  .cat .add input{font-size:15px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:#fbfcf8}
+  .cat .add input.note{flex:1;min-width:120px} .cat .add input.eur{width:84px}
+  .cat .add button{border:0;background:var(--spk);color:#fff;font-weight:700;border-radius:8px;padding:8px 14px;font-size:14px}
+  .cat .log{margin-top:8px;font-size:12px;color:var(--muted)}
+  .cat .log div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dotted #e2e7d8}
+  .cat .log .del{color:var(--red);font-weight:700;padding:0 6px}
+  .prep{padding:8px 14px 12px;font-size:13px;color:var(--muted)}
+  .prep div{display:flex;justify-content:space-between;padding:3px 0} .prep .t{color:var(--ink)}
+  .pend li{list-style:none;display:flex;gap:9px;padding:9px 14px;border-top:1px solid var(--line);font-size:13.5px;line-height:1.35}
+  .pend li:first-child{border-top:0}
+  .pend .chk{width:20px;height:20px;border:2px solid var(--spkl);border-radius:6px;flex:0 0 auto;margin-top:1px}
+  .pend li.done .chk{background:var(--spk);border-color:var(--spk)} .pend li.done .tx{text-decoration:line-through;color:var(--muted)}
+  .add-cat{width:100%;border:1px dashed var(--line);background:#fbfcf8;color:var(--spkl);font-weight:700;padding:11px;border-radius:10px;font-size:14px}
+  .foot{text-align:center;font-size:11px;color:var(--muted);padding:4px 14px 0}
+  .foot a{color:var(--spkl)}
+  .prow{display:flex;align-items:center;gap:9px;padding:9px 14px;border-top:1px solid var(--line)}
+  .prow:first-child{border-top:0}
+  .prow.sel{background:#f2f8ea}
+  .chk2{width:22px;height:22px;border:2px solid var(--spkl);border-radius:6px;flex:0 0 auto;position:relative}
+  .prow.sel .chk2{background:var(--spk);border-color:var(--spk)}
+  .prow.sel .chk2::after{content:"✓";color:#fff;font-size:14px;font-weight:800;position:absolute;top:-1px;left:4px}
+  .prow .pl{flex:1;font-size:13.5px;font-weight:600} .prow .pl small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+  .prow .pest{width:66px;font-size:15px;padding:7px 7px;border:1px solid var(--line);border-radius:8px;background:#fbfcf8;text-align:right}
+  .prow .pbuy{border:0;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:8px;padding:7px 8px;font-size:11.5px}
+  .plansum{padding:12px 14px;background:var(--calc);border-top:1px solid #e7c766;font-size:15px;line-height:1.5}
+  .plansum b{font-size:18px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1 id="ttl"></h1><div class="sub" id="sub"></div>
+  <div class="cash">
+    <div class="box"><div class="k">Στο χέρι</div><div class="v" id="c-hand"></div></div>
+    <div class="box"><div class="k">Ξοδέψαμε</div><div class="v" id="c-spent"></div></div>
+    <div class="box big"><div class="k">Μένουν</div><div class="v" id="c-left"></div></div>
+  </div>
+  <div class="loan" id="loan"></div>
+</div>
+
+<div class="wrap">
+  <div class="card" id="cloudCard" style="display:none">
+    <div style="padding:12px 14px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+      <span id="cloudStatus" style="flex:1;min-width:150px;font-size:12.5px;font-weight:600"></span>
+      <button class="pbuy" style="padding:8px 12px" onclick="cloudLoad()">↻ Φόρτωση</button>
+      <button style="border:0;background:var(--spk);color:#fff;font-weight:700;border-radius:8px;padding:8px 15px;font-size:14px" onclick="cloudSave()">☁ Αποθήκευση</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Χωράει; — γρήγορος υπολογισμός</h2>
+    <div class="qc">
+      <div class="row">
+        <input id="qc-price" type="number" inputmode="decimal" placeholder="τιμή €" oninput="calc()">
+        <span style="font-size:15px">×</span>
+        <div class="seg" id="qc-seg">
+          <button data-n="18" class="on" onclick="pickN(this,18)">18 παιδιά</button>
+          <button data-n="24" onclick="pickN(this,24)">24 όλοι</button>
+          <button data-n="1" onclick="pickN(this,1)">×1</button>
+        </div>
+        <input id="qc-cust" type="number" inputmode="numeric" placeholder="N" style="width:64px" oninput="pickCust()">
+      </div>
+      <div class="out" id="qc-out"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Σχεδιασμός επόμενων <span style="text-transform:none;font-weight:400">τσέκαρε τι θα αγοράσεις</span></h2>
+    <div id="plan"></div>
+    <div class="plansum" id="plansum"></div>
+  </div>
+
+  <div class="card">
+    <h2>Έξοδα επί τόπου <span class="tap" style="text-transform:none">άγγιξε → πρόσθεσε</span></h2>
+    <div id="cats"></div>
+    <div style="padding:12px 14px"><button class="add-cat" onclick="addCat()">+ Νέα κατηγορία</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Προπληρωμένα <span style="text-transform:none;font-weight:400">(λογ/σμός συστήματος — όχι από τα μετρητά)</span></h2>
+    <div class="prep" id="prep"></div>
+  </div>
+
+  <div class="card">
+    <h2>Εκκρεμότητες</h2>
+    <ul class="pend" id="pend" style="margin:0;padding:0"></ul>
+    <div style="padding:10px 14px"><button class="add-cat" onclick="addPend()">+ Νέα εκκρεμότητα</button></div>
+  </div>
+
+  <div class="foot">Στο χέρι €7.345,03 = δικός σου €4.956 + Λύγκας €2.389,03 (ταμείο €1.389,03 + δάνειο €1.000) · αποθηκεύεται στη συσκευή · <a href="#" onclick="reset();return false">επαναφορά</a></div>
+</div>
+
+<script>
+const A={title:"ΜΔΥ 76ης ΚΑ — Κρήτη 2026", dates:"18–25 Ιουλίου · 24 άτομα · μετρητά Revolut (κοινό ταμείο)",
+  hand:7345.03, loan:1000, tamio:1389.03};
+// ☁ ΚΟΙΝΟ ΤΑΜΕΙΟ (Google Sheet): βάλε εδώ το URL του Web App και τον κωδικό.
+// Άφησέ τα κενά για τοπική-μόνο λειτουργία (χωρίς κοινό).
+const CLOUD={url:"https://script.google.com/a/macros/76.life/s/AKfycbziEKoPqy_213TVpBPuUnYUd54ka2KS_PjH9yliV2vncyKKn7pxrrmfgSM0JfH5gsSoww/exec", key:"mdy76kriti"};
+let N=18;
+let cats=[
+ {n:"Διατροφή / σούπερ μάρκετ", log:[
+    {t:"Φίνος — τροφοδοσία αρχής + καθαριστικά",a:64.95},
+    {t:"Πρώτο δείπνο (έξω)",a:198.80},
+    {t:"Γάλατα Κυριακή (Φίνος)",a:9.58},
+    {t:"19/7 Μεσημεριανό (μερίδες)",a:126.24},
+    {t:"19/7 Δείπνο ΛΑΦ (Λέσχη Αξιωματικών)",a:200.59},
+    {t:"19/7 Lidl (τρόφιμα/καθαριστικά)",a:215.02},
+    {t:"19/7 Φίνος",a:14.12},
+    {t:"20/7 Εστιατόριο ΚριΚρι (Αγ. Ρουμέλη)",a:508},
+    {t:"21/7 Lidl (έως 22/7)",a:71.73},
+    {t:"21/7 Δείπνο Πατριδογευσία",a:289.10}]},
+ {n:"Αναμνηστικά", log:[
+    {t:"Σήματα (Ricami)",a:317.13},{t:"Μπρελόκ (PH Needle)",a:124},
+    {t:"Φανέλες (The T-shirt inc)",a:306},{t:"Σημαίες (Paphitis Safety)",a:119},
+    {t:"Αυτοκόλλητα (Solutions Copy Centre)",a:45},{t:"Φανέλες ροζ (The T-shirt inc)",a:144}]},
+ {n:"Δημόσιες σχέσεις", log:[
+    {t:"Αναμνηστικές πλακέτες",a:30},{t:"Μαντήλια (προσκοπικό πρατήριο)",a:81},
+    {t:"3 αντίσκηνα Jumbo (δωρεά στο σύστημα Χανίων)",a:156.24}]},
+ {n:"Μετακινήσεις επί τόπου", log:[
+    {t:"ΚΤΕΛ αεροδρόμιο→προορισμός (9+9)",a:48.60},
+    {t:"Τοπικό λεωφορείο 1ης μέρας (3× · 18×1,30)",a:70.20},
+    {t:"18/7 Πάρκινγκ",a:7},
+    {t:"19/7 Λεωφορεία (23,40+46,80)",a:70.20},
+    {t:"20/7 Καράβι Αγ. Ρουμέλη→Σούγια",a:315}]},
+ {n:"Είσοδοι / εργαστήρια / δραστηριότητες", log:[
+    {t:"Εργαστήρι Μαχαιροποιίας",a:480},
+    {t:"20/7 Φαράγγι Σαμαριάς (ΟΦΥΠΕΚΑ · 7×8)",a:56},
+    {t:"22/7 Υδάτινα ποδήλατα (λίμνη Κουρνά)",a:80}]},
+ {n:"Καύσιμα", log:[{t:"BP",a:76.01}]},
+ {n:"Υλικά / εξοπλισμός", log:[
+    {t:"Skroutz — υπαίθριο ντους + pop-up tent",a:62},
+    {t:"Φίνος — ανταλλακτικά λάστιχων μπάνιου",a:3.10},
+    {t:"21/7 Λάμπα (Φίνος)",a:2.20}]},
+ {n:"Έκτακτα", log:[{t:"21/7 Μπάλα (Ελαφονήσι)",a:7},
+    {t:"18/7 Δείπνο Χανιά (Στυλιανός Γιαννάκη) — wallet→προσωπικό «Yiannakis Chania dinner 18»",a:75.80}]},
+];
+const prepaid=[
+ {t:"TravelPass (αεροπορικά / μεταφορές)", a:8568, note:"150 + 8.418"},
+ {t:"AllCreteTours (τουρ / μεταφορικά)", a:2400, note:"720 + 1.680 · περιλ. Τουρ 23/7 & 24/7"},
+];
+let pend=[
+ {t:"💶 €420 λεωφορείο Κύπρου (με τα αεροπορικά) — ΔΕΝ στάλθηκε ακόμη", d:false},
+ {t:"💶 €680 ενοικιαζόμενο όχημα + ασφάλειες — να πληρωθεί", d:false},
+ {t:"Λεωφορείο: πήρε κέντρο → χρειάστηκε κι άλλο λεωφορείο (κόστος;)", d:true},
+ {t:"Εκδήλωση Τουρκ. Εισβολής — πήγαμε ✓", d:true},
+ {t:"Εργαστήρι Μαχαιροποιίας — έγινε ✓", d:true},
+ {t:"Αντικριστό — ΔΕΝ πήγαμε (ακυρώθηκε)", d:true},
+];
+// επόμενα γεύματα/δραστηριότητες (εκτίμηση €, την αλλάζεις)· ποσοτολόγιο → τι, όχι πόσο €
+let plan=[
+ {day:"22/7", label:"Δείπνο", what:"Custom pizza", est:200, type:"food"},
+ {day:"23/7", label:"Πρωινό", what:"ψωμί/μαρμ./τυρί", est:55, type:"food"},
+ {day:"23/7", label:"Δεκατιανό", what:"κέικ, χυμός", est:35, type:"food"},
+ {day:"23/7", label:"Γεύμα", what:"Ταβέρνα Μαργαρίτες", est:300, type:"food"},
+ {day:"23/7", label:"Απογευματινό", what:"μήλα", est:30, type:"food"},
+ {day:"23/7", label:"Δείπνο", what:"τζιζι μιζι", est:260, type:"food"},
+ {day:"24/7", label:"Πρωινό", what:"μπέικον & αυγό", est:70, type:"food"},
+ {day:"24/7", label:"Δεκατιανό", what:"φρούτο", est:30, type:"food"},
+ {day:"24/7", label:"Γεύμα", what:"μακαρόνια πέστο", est:120, type:"food"},
+ {day:"24/7", label:"Απογευματινό", what:"καρπούζι, φέτα", est:40, type:"food"},
+ {day:"24/7", label:"Δείπνο", what:"Γύρος", est:260, type:"food"},
+ {day:"25/7", label:"Πρωινό", what:"δημητριακά με γάλα", est:55, type:"food"},
+ {day:"25/7", label:"Δεκατιανό", what:"κρουασάν, χυμός", est:35, type:"food"},
+ {day:"Είσοδοι", label:"Μονή Αρκαδίου", what:"προϋπ. 23×3", est:69, type:"act"},
+ {day:"Είσοδοι", label:"Μουσείο Ελεύθερνα", what:"προϋπ. 23×4", est:92, type:"act"},
+ {day:"Είσοδοι", label:"Σπηλιά Μελιδονίου", what:"προϋπ. 23×3", est:69, type:"act"},
+ {day:"Είσοδοι", label:"Αρχαιολογικός Χώρος Κνωσσού", what:"€20/ενήλικα >25", est:80, type:"act"},
+];
+function save(){try{localStorage.setItem("mdy_kriti_v21",JSON.stringify({cats,pend,plan}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem("mdy_kriti_v21"));if(s&&s.cats){cats=s.cats;pend=s.pend||pend;plan=s.plan||plan;}}catch(e){}}
+load();
+const eur=x=>"€"+(x).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const spentOf=c=>c.log.reduce((s,e)=>s+(+e.a||0),0);
+const expOf=c=>c.log.reduce((s,e)=>s+(e.exp!=null?+e.exp:+e.a||0),0);
+// προϋπολογισμός ΣΠΚ ανά κατηγορία (για expected vs actual)
+const CATBUD={"Διατροφή / σούπερ μάρκετ":3274.03,"Αναμνηστικά":720,"Δημόσιες σχέσεις":203,
+ "Είσοδοι / εργαστήρια / δραστηριότητες":870,"Υλικά / εξοπλισμός":225,"Έκτακτα":200};
+function tot(){const spent=cats.reduce((s,c)=>s+spentOf(c),0);return{spent,left:A.hand-spent};}
+function render(){
+  document.getElementById("ttl").textContent=A.title;
+  document.getElementById("sub").textContent=A.dates;
+  const t=tot();
+  document.getElementById("c-hand").textContent=eur(A.hand);
+  document.getElementById("c-spent").textContent=eur(t.spent);
+  document.getElementById("c-left").textContent=eur(t.left);
+  // loan status: ασφαλές όσο μένουν ≥ δάνειο (δηλ. δεν αγγίξαμε το δανεικό)
+  const own=A.hand-A.loan; const intoLoan=Math.max(0,A.loan-t.left);
+  const L=document.getElementById("loan");
+  const pctOwn=Math.max(0,Math.min(100,(t.left-A.loan)/own*100));
+  if(t.left>=A.loan){
+    L.className="loan safe";
+    L.innerHTML=`✓ Δεν αγγίξατε το δανεικό — δικά σας διαθέσιμα: <b>${eur(t.left-A.loan)}</b> (πάνω από το €1.000 απόθεμα)
+      <div class="barw"><i style="width:${pctOwn}%"></i><span class="mark" style="left:100%"></span></div>`;
+  }else{
+    L.className="loan warn";
+    L.innerHTML=`⚠ Μπήκατε στο δανεικό κατά <b>${eur(intoLoan)}</b> — μένει απόθεμα <b>${eur(t.left)}</b> από €1.000`;
+  }
+  const box=document.getElementById("cats");box.innerHTML="";
+  cats.forEach((c,i)=>{
+    const sp=spentOf(c), bud=CATBUD[c.n]||0, over=bud&&sp>bud;
+    const d=document.createElement("div");d.className="cat"+(c.open?" open":"");
+    const budline=bud?`<small>${eur(sp)} / προϋπ. ${eur(bud)} · <b style="color:${over?'var(--red)':'var(--ok)'}">${over?'+'+eur(sp-bud)+' πάνω':eur(bud-sp)+' μένει'}</b></small>`:'';
+    d.innerHTML=`<div class="hd" onclick="toggle(${i})">
+       <div class="nm">${c.n} <span class="tap">${c.open?'▲':'▾'}</span>${budline}</div>
+       <div class="amt"><div class="sp" style="${over?'color:var(--red)':''}">${eur(sp)}</div></div></div>
+       <div class="add">
+         <input class="note" id="nt${i}" placeholder="τι / πού">
+         <input class="eur" id="am${i}" type="number" inputmode="decimal" placeholder="€">
+         <button onclick="addExp(${i})">Πρόσθεσε</button></div>
+       <div class="log">${c.log.map((e,j)=>{
+          const v=(e.exp!=null&&+e.exp!==+e.a)?(+e.a-+e.exp):null;
+          const vtxt=v!=null?` <small style="color:${v>0?'var(--red)':'var(--ok)'}">(εκτ. ${eur(+e.exp)}, ${v>0?'+':''}${eur(v)})</small>`:'';
+          return `<div><span>${e.vendor?'🏪 ':''}${e.t||'—'}${vtxt}</span><span>${eur(+e.a||0)} <span class="del" onclick="delExp(${i},${j})">✕</span></span></div>`;
+        }).join('')}</div>`;
+    box.appendChild(d);
+  });
+  document.getElementById("prep").innerHTML=prepaid.map(p=>`<div><span class="t">${p.t} <small style="color:var(--muted)">${p.note||''}</small></span><span>${eur(p.a)}</span></div>`).join('')
+    +`<div style="border-top:1px solid var(--line);margin-top:4px;padding-top:6px;font-weight:800"><span class="t">Σύνολο προπληρωμένα</span><span>${eur(prepaid.reduce((s,p)=>s+p.a,0))}</span></div>`;
+  const pl=document.getElementById("pend");pl.innerHTML="";
+  pend.forEach((p,i)=>{const li=document.createElement("li");li.className=p.d?"done":"";
+    li.innerHTML=`<span class="chk" onclick="tog(${i})"></span><span class="tx" onclick="tog(${i})">${p.t}</span>`;pl.appendChild(li);});
+  renderPlan(); calc(); save();
+}
+function selTotal(){return plan.reduce((s,p)=>s+(p.sel?(+p.est||0):0),0);}
+function renderPlan(){
+  const box=document.getElementById("plan");box.innerHTML="";
+  plan.forEach((p,i)=>{
+    const d=document.createElement("div");d.className="prow"+(p.sel?" sel":"");
+    d.innerHTML=`<span class="chk2" onclick="planSel(${i})"></span>
+      <div class="pl">${p.day} · ${p.label}<small>${p.what||''}</small></div>
+      <input class="pest" type="number" inputmode="decimal" value="${p.est}" onchange="planEst(${i},this.value)">
+      <button class="pbuy" onclick="planPaid(${i})">πληρώθηκε</button>`;
+    box.appendChild(d);
+  });
+  const sel=selTotal(), after=tot().left-sel, nsel=plan.filter(p=>p.sel).length;
+  const sm=document.getElementById("plansum");
+  if(!sel){sm.innerHTML="Τσέκαρε τι θα αγοράσεις για να δεις κόστος & τι θα σου μείνει.";return;}
+  const warn=after<A.loan;
+  sm.innerHTML=`Επιλεγμένα (${nsel}): <b>${eur(sel)}</b> · θα σου μείνουν <b>${eur(after)}</b>
+    <span class="pill ${after>=0?'ok':'no'}">${after>=0?'χωράει ✓':'ΔΕΝ φτάνει ✕'}</span>
+    ${after>=0&&warn?'<br><span style="color:var(--amber)">⚠ μπαίνεις στο δανεικό</span>':''}
+    <div style="margin-top:9px"><button class="add-cat" style="width:auto;padding:9px 14px" onclick="payGroup()">💳 Πληρώθηκαν μαζί (μία απόδειξη)</button></div>`;
+}
+function payGroup(){
+  const chosen=plan.map((p,i)=>({p,i})).filter(o=>o.p.sel);
+  if(!chosen.length){alert("Τσέκαρε πρώτα τι κάλυψε η απόδειξη.");return;}
+  const vendor=(prompt("Προμηθευτής / πού; (μία απόδειξη)","")||"").trim();
+  const expSum=chosen.reduce((s,o)=>s+(+o.p.est||0),0);
+  const act=parseFloat(prompt(`Σύνολο απόδειξης (€). Εκτίμηση: ${expSum.toFixed(2)}`, expSum.toFixed(2)));
+  if(isNaN(act))return;
+  const anyFood=chosen.some(o=>o.p.type==="food");
+  const nm=anyFood?"Διατροφή / σούπερ μάρκετ":"Είσοδοι / εργαστήρια / δραστηριότητες";
+  let c=cats.find(x=>x.n===nm)||cats[0];
+  const labels=chosen.map(o=>`${o.p.day} ${o.p.label}`).join(", ");
+  c.log.push({t:`${vendor||'Απόδειξη'} — ${labels}`,exp:expSum,a:act,vendor});
+  chosen.map(o=>o.i).sort((a,b)=>b-a).forEach(i=>plan.splice(i,1));
+  render();
+}
+function planSel(i){plan[i].sel=!plan[i].sel;render();}
+function planEst(i,v){plan[i].est=parseFloat(v)||0;render();}
+function planPaid(i){const p=plan[i];
+  const vendor=(prompt("Προμηθευτής / πού; (προαιρετικό)","")||"").trim();
+  const act=parseFloat(prompt("Πόσο πληρώσατε τελικά; (€)", (+p.est||0).toFixed(2)));
+  if(isNaN(act))return;
+  const nm=p.type==="act"?"Είσοδοι / εργαστήρια / δραστηριότητες":"Διατροφή / σούπερ μάρκετ";
+  let c=cats.find(x=>x.n===nm)||cats[0];
+  c.log.push({t:`${p.day} ${p.label}${p.what?' ('+p.what+')':''}`,exp:+p.est||0,a:act,vendor});
+  plan.splice(i,1);render();}
+function toggle(i){cats[i].open=!cats[i].open;render();}
+function addExp(i){const nt=document.getElementById("nt"+i).value.trim();const am=parseFloat(document.getElementById("am"+i).value);
+  if(!am)return; cats[i].log.push({t:nt||"έξοδο",a:am}); cats[i].open=true; render();}
+function delExp(i,j){event.stopPropagation();cats[i].log.splice(j,1);render();}
+function tog(i){pend[i].d=!pend[i].d;render();}
+function addPend(){const t=prompt("Νέα εκκρεμότητα:");if(t)pend.push({t,d:false});render();}
+function addCat(){const n=prompt("Όνομα κατηγορίας:");if(n){cats.unshift({n,log:[],open:true});render();}}
+function pickN(btn,n){N=n;document.getElementById("qc-cust").value="";[...document.querySelectorAll('#qc-seg button')].forEach(b=>b.classList.toggle('on',b===btn));calc();}
+function pickCust(){const v=parseInt(document.getElementById("qc-cust").value);if(v){N=v;[...document.querySelectorAll('#qc-seg button')].forEach(b=>b.classList.remove('on'));}calc();}
+function calc(){
+  const price=parseFloat(document.getElementById("qc-price").value);const out=document.getElementById("qc-out");const t=tot();
+  if(!price){out.innerHTML=`Μένουν <b>${eur(t.left)}</b> · ανά άτομο (24): <b>${eur(t.left/24)}</b>`;return;}
+  const s=price*N, fits=s<=t.left, after=t.left-s, dips=after<A.loan;
+  out.innerHTML=`${eur(price)} × ${N} = <b>${eur(s)}</b> <span class="pill ${fits?'ok':'no'}">${fits?'χωράει ✓':'ΔΕΝ χωράει ✕'}</span><br>
+    Μετά: μένουν <b>${eur(after)}</b>${fits&&dips?` <span style="color:var(--amber)">— μπαίνεις στο δανεικό</span>`:''}`;
+}
+render();
+// ---- ☁ Κοινό ταμείο (read-on-open / save-on-button) ----
+function cstat(html){const s=document.getElementById("cloudStatus");if(s)s.innerHTML=html;}
+async function cloudLoad(){
+  if(!CLOUD.url){return;}
+  cstat("⏳ Φόρτωση από το κοινό ταμείο…");
+  try{
+    const r=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now());
+    const s=await r.json();
+    if(s&&s.cats){cats=s.cats;pend=s.pend||pend;plan=s.plan||plan;save();render();
+      cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
+    else{cstat("ℹ️ Κοινό ταμείο άδειο — πάτα «☁ Αποθήκευση» για αρχικοποίηση.");}
+  }catch(e){cstat("⚠️ Δεν φόρτωσε — έλεγξε URL/σύνδεση. Δουλεύεις τοπικά.");}
+}
+async function cloudSave(){
+  if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
+  cstat("⏳ Αποθήκευση στο κοινό ταμείο…");
+  try{
+    const body=JSON.stringify({key:CLOUD.key,data:{cats,pend,plan}});
+    const r=await fetch(CLOUD.url,{method:"POST",body});
+    const s=await r.json();
+    if(s&&s.ok){cstat("✅ Αποθηκεύτηκε στο κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
+    else{cstat("⚠️ Δεν αποθηκεύτηκε: "+((s&&s.error)||"άγνωστο"));}
+  }catch(e){cstat("⚠️ Δεν αποθηκεύτηκε — έλεγξε URL/σύνδεση.");}
+}
+if(CLOUD.url){document.getElementById("cloudCard").style.display="";cloudLoad();}
+function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStorage.removeItem("mdy_kriti_v21");}catch(e){}location.reload();}}
+</script>
+</body>
+</html>
