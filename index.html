@@ -89,6 +89,12 @@
   .b-restore{background:var(--amberbg);color:var(--amber)}.b-cancel{background:#eef3e7;color:var(--ink)}
   #undoBar{display:none;position:fixed;left:0;right:0;bottom:0;background:var(--spkd);color:#fff;padding:11px 14px;text-align:center;z-index:25;font-size:13px}
   #undoBar button{background:#fff;color:var(--spkd);border:0;border-radius:7px;padding:6px 13px;font-weight:800;margin-left:8px}
+  #rBody table{border-collapse:collapse;width:100%;font-size:11.5px;margin-bottom:6px}
+  #rBody th,#rBody td{border:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}
+  #rBody th{background:var(--spk);color:#fff;font-size:10.5px;position:sticky;top:0}
+  #rBody td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  #rBody tr.tot td{font-weight:800;background:#f2f6ec}
+  #rBody h4{margin:14px 0 4px;color:var(--spkd);font-size:13px}
 </style>
 </head>
 <body>
@@ -152,6 +158,11 @@
     <div style="padding:10px 14px"><button class="add-cat" onclick="addPend()">+ Νέα εκκρεμότητα</button></div>
   </div>
 
+  <div class="card">
+    <h2>Απολογισμός</h2>
+    <div style="padding:6px 14px 14px"><button class="newexp" style="background:var(--spkd)" onclick="openReport()">📄 Αποδείξεις χρονολογικά + σύνολα</button></div>
+  </div>
+
   <div class="foot">Στο χέρι €7.345,03 = δικός σου €4.956 + Λύγκας €2.389,03 (ταμείο €1.389,03 + δάνειο €1.000) · αποθηκεύεται στη συσκευή · <a href="#" onclick="reset();return false">επαναφορά</a></div>
 </div>
 
@@ -160,6 +171,8 @@
     <h3 id="mTitle">Έξοδο</h3>
     <label>Κατηγορία</label>
     <select id="mCat"></select>
+    <label>Ημερομηνία</label>
+    <input id="mDate" type="date">
     <label>Τι / πού</label>
     <input id="mT" placeholder="π.χ. Lidl τρόφιμα">
     <label>Προμηθευτής (προαιρετικό)</label>
@@ -177,6 +190,17 @@
       <button class="b-del" id="mDel" onclick="delFromModal()" style="display:none">Διαγραφή</button>
       <button class="b-save" onclick="saveModal()">Αποθήκευση</button>
     </div>
+  </div>
+</div>
+<div class="ov" id="ov2">
+  <div class="sheet">
+    <h3 id="rTitle">Απολογισμός — αποδείξεις χρονολογικά</h3>
+    <div class="acts" style="margin:0 0 12px">
+      <button class="b-cancel" onclick="closeReport()">Κλείσιμο</button>
+      <button class="b-restore" onclick="copyReport()">📋 Αντιγραφή (Sheets/Excel)</button>
+      <button class="b-save" onclick="downloadCSV()">⬇ CSV</button>
+    </div>
+    <div id="rBody" style="font-size:12.5px"></div>
   </div>
 </div>
 <div id="undoBar">Έγινε αλλαγή. <button onclick="undo()">↩ Αναίρεση</button></div>
@@ -343,7 +367,7 @@ function payGroup(){
   const labels=chosen.map(o=>`${o.p.day} ${o.p.label}`).join(", ");
   const expSum=chosen.reduce((s,o)=>s+(+o.p.est||0),0);
   const _plans=chosen.map(o=>({day:o.p.day,label:o.p.label,what:o.p.what||'',est:+o.p.est||0,type:o.p.type||'act'}));
-  M={mode:'group',ci,li:-1,t:labels,vendor:'',exp:expSum||'',parts:[{a:'',note:''}],_plan:null,_plans,_idx:chosen.map(o=>o.i)};
+  M={mode:'group',ci,li:-1,d:today(),t:labels,vendor:'',exp:expSum||'',parts:[{a:'',note:''}],_plan:null,_plans,_idx:chosen.map(o=>o.i)};
   buildCatSelect(ci);
   document.getElementById("mTitle").textContent=`Πληρωμή — ${chosen.length} επιλεγμένα (πολλές αποδείξεις ok)`;
   document.getElementById("mDel").style.display="none";
@@ -356,7 +380,7 @@ function planPaid(i){const p=plan[i];
   const nm=p.type==="act"?"Είσοδοι / εργαστήρια / δραστηριότητες":"Διατροφή / σούπερ μάρκετ";
   const ci=Math.max(0,cats.findIndex(c=>c.n===nm));
   const _plan={day:p.day,label:p.label,what:p.what||'',est:+p.est||0,type:p.type||'act'};
-  M={mode:'group',ci,li:-1,t:`${p.day} ${p.label}${p.what?' ('+p.what+')':''}`,vendor:'',exp:(+p.est||0)||'',parts:[{a:'',note:''}],_plan:null,_plans:[_plan],_idx:[i]};
+  M={mode:'group',ci,li:-1,d:today(),t:`${p.day} ${p.label}${p.what?' ('+p.what+')':''}`,vendor:'',exp:(+p.est||0)||'',parts:[{a:'',note:''}],_plan:null,_plans:[_plan],_idx:[i]};
   buildCatSelect(ci);
   document.getElementById("mTitle").textContent="Πληρωμή (μία ή πολλές αποδείξεις)";
   document.getElementById("mDel").style.display="none";
@@ -364,7 +388,7 @@ function planPaid(i){const p=plan[i];
   fillModal();openModal();}
 function toggle(i){cats[i].open=!cats[i].open;render();}
 function addExp(i){const nt=document.getElementById("nt"+i).value.trim();const am=parseFloat(document.getElementById("am"+i).value);
-  if(isNaN(am))return; snap(); let t=nt||"έξοδο"; if(am===0&&!/δωρε/i.test(t))t+=" — δωρεάν"; cats[i].log.push({t,a:am}); cats[i].open=true; markDirty(); render();}
+  if(isNaN(am))return; snap(); let t=nt||"έξοδο"; if(am===0&&!/δωρε/i.test(t))t+=" — δωρεάν"; cats[i].log.push({t,a:am,d:today()}); cats[i].open=true; markDirty(); render();}
 function delExp(i,j){event.stopPropagation();snap();cats[i].log.splice(j,1);markDirty();render();}
 function tog(i){pend[i].d=!pend[i].d;markDirty();render();}
 function addPend(){const t=prompt("Νέα εκκρεμότητα:");if(t){snap();pend.push({t,d:false});markDirty();render();}}
@@ -382,7 +406,7 @@ function closeModal(){document.getElementById("ov").classList.remove("on");}
 function buildCatSelect(sel){const s=document.getElementById("mCat");
   s.innerHTML=cats.map((c,i)=>`<option value="${i}">${c.n}</option>`).join('')+`<option value="__new">➕ Νέα / έκτακτη κατηγορία…</option>`;
   s.value=(sel>=0?String(sel):"0");}
-function openNewExpense(){M={mode:'new',ci:-1,li:-1,t:'',vendor:'',exp:'',parts:[{a:'',note:''}],_plan:null,_plans:null};
+function openNewExpense(){M={mode:'new',ci:-1,li:-1,d:today(),t:'',vendor:'',exp:'',parts:[{a:'',note:''}],_plan:null,_plans:null};
   buildCatSelect(-1);
   document.getElementById("mTitle").textContent="Νέο έξοδο";
   document.getElementById("mDel").style.display="none";
@@ -390,14 +414,14 @@ function openNewExpense(){M={mode:'new',ci:-1,li:-1,t:'',vendor:'',exp:'',parts:
   fillModal();openModal();}
 function openEdit(ci,li){const e=cats[ci].log[li];
   const parts=(e.parts&&e.parts.length)?e.parts.map(p=>({a:p.a,note:p.note||''})):[{a:(+e.a||0),note:''}];
-  M={mode:'edit',ci,li,t:e.t||'',vendor:e.vendor||'',exp:(e.exp!=null?e.exp:''),parts,_plan:e._plan||null,_plans:e._plans||null};
+  M={mode:'edit',ci,li,d:isoOf(e),t:e.t||'',vendor:e.vendor||'',exp:(e.exp!=null?e.exp:''),parts,_plan:e._plan||null,_plans:e._plans||null};
   buildCatSelect(ci);
   document.getElementById("mTitle").textContent="Επεξεργασία εξόδου";
   document.getElementById("mDel").style.display="";
   document.getElementById("mRestore").style.display=(e._plan||e._plans)?"":"none";
   fillModal();openModal();}
 function fillModal(){document.getElementById("mT").value=M.t;document.getElementById("mVendor").value=M.vendor;
-  document.getElementById("mExp").value=M.exp;renderParts();}
+  document.getElementById("mExp").value=M.exp;document.getElementById("mDate").value=M.d||"";renderParts();}
 function renderParts(){const box=document.getElementById("mParts");
   box.innerHTML=M.parts.map((p,i)=>`<div class="prow2">
     <input type="number" inputmode="decimal" placeholder="€" value="${p.a}" onchange="partA(${i},this.value)">
@@ -415,6 +439,7 @@ function saveModal(){
   M.t=document.getElementById("mT").value.trim();
   M.vendor=document.getElementById("mVendor").value.trim();
   M.exp=document.getElementById("mExp").value;
+  M.d=document.getElementById("mDate").value;
   let cv=document.getElementById("mCat").value, ci;
   if(cv==="__new"){const n=(prompt("Όνομα νέας / έκτακτης κατηγορίας:","Έκτακτα")||"").trim();if(!n)return;
     let ex=cats.findIndex(c=>c.n===n); if(ex>=0)ci=ex; else{cats.push({n,log:[]});ci=cats.length-1;}}
@@ -423,6 +448,7 @@ function saveModal(){
   const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
   let t=M.t||"έξοδο"; if(total===0&&!/δωρε/i.test(t)) t+=" — δωρεάν";
   const entry={t,a:total};
+  if(M.d)entry.d=M.d;
   if(M.vendor)entry.vendor=M.vendor;
   if(M.exp!==''&&M.exp!=null&&!isNaN(parseFloat(M.exp)))entry.exp=parseFloat(M.exp);
   if(parts.length>1)entry.parts=parts;
@@ -449,6 +475,38 @@ function undo(){if(!undoSnap)return;const s=JSON.parse(undoSnap);cats=s.cats;pen
 function markDirty(){dirty=true;const d=document.getElementById("dirtyNote");if(d&&CLOUD.url)d.style.display="block";}
 function clearDirty(){dirty=false;const d=document.getElementById("dirtyNote");if(d)d.style.display="none";
   const u=document.getElementById("undoBar");if(u)u.style.display="none";}
+// ---- Απολογισμός (χρονολογικά) ----
+function today(){const d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
+function isoOf(e){if(e.d)return e.d;const m=(e.t||'').match(/(\d{1,2})\/(\d{1,2})/);if(m)return "2026-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2);return "";}
+function ddmm(iso){if(!iso)return "—";const p=iso.split("-");return p.length===3?(p[2]+"/"+p[1]):iso;}
+function reportRows(){const rows=[];
+  cats.forEach(c=>c.log.forEach(e=>rows.push({iso:isoOf(e),cat:c.n,t:e.t||'',vendor:e.vendor||'',a:+e.a||0,n:(e.parts&&e.parts.length)||1})));
+  rows.sort((x,y)=>{const a=x.iso||"9999-99-99",b=y.iso||"9999-99-99";return a<b?-1:a>b?1:0;});return rows;}
+function openReport(){const rows=reportRows(),grand=rows.reduce((s,r)=>s+r.a,0),byCat={};
+  rows.forEach(r=>byCat[r.cat]=(byCat[r.cat]||0)+r.a);
+  let h=`<table><tr><th>Ημ/νία</th><th>Τι / πού</th><th>Κατηγορία</th><th>Προμηθ.</th><th>Απ.</th><th>Ποσό</th></tr>`;
+  rows.forEach(r=>{h+=`<tr><td>${ddmm(r.iso)}</td><td>${r.t}</td><td>${r.cat}</td><td>${r.vendor||''}</td><td class="n">${r.n>1?r.n:''}</td><td class="n">${eur(r.a)}</td></tr>`;});
+  h+=`<tr class="tot"><td colspan="5">ΣΥΝΟΛΟ (${rows.length} εγγρ.)</td><td class="n">${eur(grand)}</td></tr></table>`;
+  h+=`<h4>Σύνολα ανά κατηγορία</h4><table>`;
+  Object.keys(byCat).forEach(k=>{h+=`<tr><td>${k}</td><td class="n">${eur(byCat[k])}</td></tr>`;});h+=`</table>`;
+  const t=tot();
+  h+=`<h4>Ταμείο</h4><table><tr><td>Διαθέσιμα (στο χέρι)</td><td class="n">${eur(A.hand)}</td></tr>`
+    +`<tr><td>Ξοδεύτηκαν</td><td class="n">${eur(t.spent)}</td></tr>`
+    +`<tr class="tot"><td>Υπόλοιπο</td><td class="n">${eur(t.left)}</td></tr></table>`;
+  document.getElementById("rBody").innerHTML=h;document.getElementById("ov2").classList.add("on");}
+function closeReport(){document.getElementById("ov2").classList.remove("on");}
+function reportTSV(){const rows=reportRows();let o="Ημερομηνία\tΤι / πού\tΚατηγορία\tΠρομηθευτής\tΑποδείξεις\tΠοσό\n";
+  rows.forEach(r=>{o+=[ddmm(r.iso),r.t,r.cat,r.vendor,r.n,(+r.a).toFixed(2)].join("\t")+"\n";});return o;}
+function reportCSV(){const rows=reportRows(),c=x=>'"'+String(x).replace(/"/g,'""')+'"';
+  let o="Ημερομηνία;Τι / πού;Κατηγορία;Προμηθευτής;Αποδείξεις;Ποσό\n";
+  rows.forEach(r=>{o+=[ddmm(r.iso),c(r.t),c(r.cat),c(r.vendor),r.n,(+r.a).toFixed(2).replace('.',',')].join(";")+"\n";});return o;}
+async function copyReport(){const txt=reportTSV();
+  try{await navigator.clipboard.writeText(txt);alert("Αντιγράφηκε — επικόλλησε σε Google Sheets/Excel.");return;}catch(e){}
+  const ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand("copy");alert("Αντιγράφηκε — επικόλλησε σε Sheets/Excel.");}catch(_){alert("Δεν αντιγράφηκε αυτόματα — κράτα πατημένο για αντιγραφή.");}ta.remove();}
+function downloadCSV(){const blob=new Blob(["﻿"+reportCSV()],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="apologismos_mdy_kriti.csv";
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
 function pickN(btn,n){N=n;document.getElementById("qc-cust").value="";[...document.querySelectorAll('#qc-seg button')].forEach(b=>b.classList.toggle('on',b===btn));calc();}
 function pickCust(){const v=parseInt(document.getElementById("qc-cust").value);if(v){N=v;[...document.querySelectorAll('#qc-seg button')].forEach(b=>b.classList.remove('on'));}calc();}
 function calc(){
