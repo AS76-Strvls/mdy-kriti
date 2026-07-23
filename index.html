@@ -166,9 +166,9 @@
     <input id="mVendor" placeholder="π.χ. Lidl">
     <label>Εκτίμηση / προϋπολογισμός (προαιρετικό)</label>
     <input id="mExp" type="number" inputmode="decimal" placeholder="€ αν ήταν υπολογισμένο">
-    <label>Ποσό / αποδείξεις <span style="font-weight:400">(πρόσθεσε γραμμές αν σπάστηκε σε πολλές)</span></label>
+    <label>Αποδείξεις <span style="font-weight:400">— μία γραμμή ανά απόδειξη· το σύνολο βγαίνει μόνο του</span></label>
     <div class="parts" id="mParts"></div>
-    <button class="addpart" onclick="addPart()">＋ Άλλη απόδειξη</button>
+    <button class="addpart" onclick="addPart()">＋ Προσθήκη απόδειξης (για το ίδιο / τα ίδια έξοδα)</button>
     <div id="mTotal" style="margin-top:11px;font-weight:800;color:var(--spkd)"></div>
     <div class="acts">
       <button class="b-cancel" onclick="closeModal()">Άκυρο</button>
@@ -331,37 +331,36 @@ function renderPlan(){
   sm.innerHTML=`Επιλεγμένα (${nsel}): <b>${eur(sel)}</b> · θα σου μείνουν <b>${eur(after)}</b>
     <span class="pill ${after>=0?'ok':'no'}">${after>=0?'χωράει ✓':'ΔΕΝ φτάνει ✕'}</span>
     ${after>=0&&warn?'<br><span style="color:var(--amber)">⚠ μπαίνεις στο δανεικό</span>':''}
-    <div style="margin-top:9px"><button class="add-cat" style="width:auto;padding:9px 14px" onclick="payGroup()">💳 Πληρώθηκαν μαζί (μία απόδειξη)</button></div>`;
+    <div style="margin-top:9px"><button class="add-cat" style="width:auto;padding:9px 14px" onclick="payGroup()">💳 Πληρώθηκαν μαζί (μία ή πολλές αποδείξεις)</button></div>`;
 }
 function payGroup(){
   const chosen=plan.map((p,i)=>({p,i})).filter(o=>o.p.sel);
-  if(!chosen.length){alert("Τσέκαρε πρώτα τι κάλυψε η απόδειξη.");return;}
-  const vendor=(prompt("Προμηθευτής / πού; (μία απόδειξη)","")||"").trim();
-  const expSum=chosen.reduce((s,o)=>s+(+o.p.est||0),0);
-  const act=parseFloat(prompt(`Σύνολο απόδειξης (€). Εκτίμηση: ${expSum.toFixed(2)}`, expSum.toFixed(2)));
-  if(isNaN(act))return;
+  if(!chosen.length){alert("Τσέκαρε πρώτα ποια κάλυψαν οι αποδείξεις.");return;}
   const anyFood=chosen.some(o=>o.p.type==="food");
   const nm=anyFood?"Διατροφή / σούπερ μάρκετ":"Είσοδοι / εργαστήρια / δραστηριότητες";
-  let c=cats.find(x=>x.n===nm)||cats[0];
-  snap();
+  const ci=Math.max(0,cats.findIndex(c=>c.n===nm));
   const labels=chosen.map(o=>`${o.p.day} ${o.p.label}`).join(", ");
+  const expSum=chosen.reduce((s,o)=>s+(+o.p.est||0),0);
   const _plans=chosen.map(o=>({day:o.p.day,label:o.p.label,what:o.p.what||'',est:+o.p.est||0,type:o.p.type||'act'}));
-  c.log.push({t:`${vendor||'Απόδειξη'} — ${labels}`,exp:expSum,a:act,vendor,_plans});
-  chosen.map(o=>o.i).sort((a,b)=>b-a).forEach(i=>plan.splice(i,1));
-  markDirty();render();
+  M={mode:'group',ci,li:-1,t:labels,vendor:'',exp:expSum||'',parts:[{a:'',note:''}],_plan:null,_plans,_idx:chosen.map(o=>o.i)};
+  buildCatSelect(ci);
+  document.getElementById("mTitle").textContent=`Πληρωμή — ${chosen.length} επιλεγμένα (πολλές αποδείξεις ok)`;
+  document.getElementById("mDel").style.display="none";
+  document.getElementById("mRestore").style.display="none";
+  fillModal();openModal();
 }
 function planSel(i){plan[i].sel=!plan[i].sel;render();}
 function planEst(i,v){plan[i].est=parseFloat(v)||0;render();}
 function planPaid(i){const p=plan[i];
-  const vendor=(prompt("Προμηθευτής / πού; (προαιρετικό)","")||"").trim();
-  const act=parseFloat(prompt("Πόσο πληρώσατε τελικά; (€)", (+p.est||0).toFixed(2)));
-  if(isNaN(act))return;
-  snap();
   const nm=p.type==="act"?"Είσοδοι / εργαστήρια / δραστηριότητες":"Διατροφή / σούπερ μάρκετ";
-  let c=cats.find(x=>x.n===nm)||cats[0];
+  const ci=Math.max(0,cats.findIndex(c=>c.n===nm));
   const _plan={day:p.day,label:p.label,what:p.what||'',est:+p.est||0,type:p.type||'act'};
-  c.log.push({t:`${p.day} ${p.label}${p.what?' ('+p.what+')':''}`,exp:+p.est||0,a:act,vendor,_plan});
-  plan.splice(i,1);markDirty();render();}
+  M={mode:'group',ci,li:-1,t:`${p.day} ${p.label}${p.what?' ('+p.what+')':''}`,vendor:'',exp:(+p.est||0)||'',parts:[{a:'',note:''}],_plan:null,_plans:[_plan],_idx:[i]};
+  buildCatSelect(ci);
+  document.getElementById("mTitle").textContent="Πληρωμή (μία ή πολλές αποδείξεις)";
+  document.getElementById("mDel").style.display="none";
+  document.getElementById("mRestore").style.display="none";
+  fillModal();openModal();}
 function toggle(i){cats[i].open=!cats[i].open;render();}
 function addExp(i){const nt=document.getElementById("nt"+i).value.trim();const am=parseFloat(document.getElementById("am"+i).value);
   if(!am)return; snap(); cats[i].log.push({t:nt||"έξοδο",a:am}); cats[i].open=true; markDirty(); render();}
@@ -428,6 +427,7 @@ function saveModal(){
   if(M._plan)entry._plan=M._plan; if(M._plans)entry._plans=M._plans;
   snap();
   if(M.mode==='edit'){ if(M.ci===ci){cats[ci].log[M.li]=entry;} else {cats[M.ci].log.splice(M.li,1);cats[ci].log.push(entry);} }
+  else if(M.mode==='group'){ cats[ci].log.push(entry); (M._idx||[]).slice().sort((a,b)=>b-a).forEach(k=>plan.splice(k,1)); }
   else { cats[ci].log.push(entry); }
   cats[ci].open=true; markDirty(); closeModal(); render();}
 function delFromModal(){if(!confirm("Διαγραφή αυτού του εξόδου;"))return; snap();
