@@ -169,6 +169,7 @@
     <label>Αποδείξεις <span style="font-weight:400">— μία γραμμή ανά απόδειξη· το σύνολο βγαίνει μόνο του</span></label>
     <div class="parts" id="mParts"></div>
     <button class="addpart" onclick="addPart()">＋ Προσθήκη απόδειξης (για το ίδιο / τα ίδια έξοδα)</button>
+    <button class="addpart" style="margin-top:6px;border-color:#d9c27a;color:var(--amber)" onclick="setFree()">🎁 Δωρεάν — μπήκαμε χωρίς χρέωση (€0)</button>
     <div id="mTotal" style="margin-top:11px;font-weight:800;color:var(--spkd)"></div>
     <div class="acts">
       <button class="b-cancel" onclick="closeModal()">Άκυρο</button>
@@ -363,7 +364,7 @@ function planPaid(i){const p=plan[i];
   fillModal();openModal();}
 function toggle(i){cats[i].open=!cats[i].open;render();}
 function addExp(i){const nt=document.getElementById("nt"+i).value.trim();const am=parseFloat(document.getElementById("am"+i).value);
-  if(!am)return; snap(); cats[i].log.push({t:nt||"έξοδο",a:am}); cats[i].open=true; markDirty(); render();}
+  if(isNaN(am))return; snap(); let t=nt||"έξοδο"; if(am===0&&!/δωρε/i.test(t))t+=" — δωρεάν"; cats[i].log.push({t,a:am}); cats[i].open=true; markDirty(); render();}
 function delExp(i,j){event.stopPropagation();snap();cats[i].log.splice(j,1);markDirty();render();}
 function tog(i){pend[i].d=!pend[i].d;markDirty();render();}
 function addPend(){const t=prompt("Νέα εκκρεμότητα:");if(t){snap();pend.push({t,d:false});markDirty();render();}}
@@ -409,6 +410,7 @@ function partA(i,v){M.parts[i].a=v;updTotal();}
 function partNote(i,v){M.parts[i].note=v;}
 function addPart(){M.parts.push({a:'',note:''});renderParts();}
 function rmPart(i){M.parts.splice(i,1);if(!M.parts.length)M.parts=[{a:'',note:''}];renderParts();}
+function setFree(){M.parts=[{a:'0',note:'δωρεάν'}];renderParts();}
 function saveModal(){
   M.t=document.getElementById("mT").value.trim();
   M.vendor=document.getElementById("mVendor").value.trim();
@@ -419,8 +421,8 @@ function saveModal(){
   else ci=parseInt(cv);
   const parts=M.parts.map(p=>({a:parseFloat(p.a)||0,note:(p.note||'').trim()})).filter(p=>p.a||p.note);
   const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
-  if(!total){alert("Βάλε ποσό.");return;}
-  const entry={t:M.t||"έξοδο",a:total};
+  let t=M.t||"έξοδο"; if(total===0&&!/δωρε/i.test(t)) t+=" — δωρεάν";
+  const entry={t,a:total};
   if(M.vendor)entry.vendor=M.vendor;
   if(M.exp!==''&&M.exp!=null&&!isNaN(parseFloat(M.exp)))entry.exp=parseFloat(M.exp);
   if(parts.length>1)entry.parts=parts;
