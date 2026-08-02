@@ -176,6 +176,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <div class="dirty" id="dirtyNote" style="display:none;padding:0 14px 12px">● Μη αποθηκευμένες αλλαγές — πάτα «☁ Αποθήκευση» για να τις δουν οι άλλοι.</div>
 </div>
 <div class="card">
+<h2>Έσοδα / πηγές χρημάτων <span style="text-transform:none;font-weight:400">κατασκηνωτές · βαθμοφόροι · χορηγίες · ταμείο · Ε.Π.Σ. · ακυρώσεις</span></h2>
+<div class="prep" id="income" style="padding:10px 14px 4px"></div>
+<div class="row" style="padding:4px 14px 12px;gap:8px;flex-wrap:wrap">
+<button class="add-cat" style="width:auto;padding:9px 13px" onclick="addIncome()">＋ Έσοδο / πηγή</button>
+</div>
+</div>
+<div class="card">
 <h2>Ταμεία / Πηγές λεφτών <span style="text-transform:none;font-weight:400">πώς χτίστηκε &amp; ποιος πλήρωσε</span></h2>
 <div class="prep" id="wallets"></div>
 <div class="row" style="padding:6px 14px 12px;gap:8px;flex-wrap:wrap">
@@ -212,6 +219,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <h2>Εκκρεμότητες</h2>
 <ul class="pend" id="pend" style="margin:0;padding:0"></ul>
 <div style="padding:10px 14px"><button class="add-cat" onclick="openPendNew()">+ Νέα εκκρεμότητα</button></div>
+</div>
+<div class="card">
+<h2>Σημειώσεις <span style="text-transform:none;font-weight:400">ελεύθερο κείμενο — αποθηκεύεται</span></h2>
+<div style="padding:6px 14px 14px">
+<textarea id="notesBox" oninput="setNotes(this.value)" placeholder="Σημειώσεις, επεξηγήσεις, ό,τι θες να θυμάσαι… (δέχεται Enter για νέα γραμμή)" style="width:100%;min-height:110px;box-sizing:border-box;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fbfcf8;resize:vertical;line-height:1.5"></textarea>
+</div>
 </div>
 </section>
 <section id="ap-pay" class="hide">
@@ -369,7 +382,7 @@ if(!CLOUD.key&&!CLOUD.url)CLOUD.key="local";
 let SESSION={pin:"",admin:""};
 try{SESSION.pin=localStorage.getItem('apolog_pin_'+CLOUD.key)||"";SESSION.admin=sessionStorage.getItem('apolog_admin')||"";}catch(e){}
 const A={title:"Οικονομικός Απολογισμός — Νέα Δράση", dates:"όρισε: ημ/νίες · άτομα · ταμείο (πάτα τον τίτλο)",
-hand:0, loan:0, reserveLabel:"", tamio:0, paidia:0, epiteleio:0, all:1, dikaioma:0};
+hand:0, loan:0, reserveLabel:"", tamio:0, paidia:0, epiteleio:0, all:1, dikaioma:0, notes:""};
 let N=18;
 let cats=[];
 const prepaid=[];
@@ -381,12 +394,15 @@ let wallets=[
  {id:"main", name:"Ταμείο δράσης (μετρητά)", opening:0, cash:true},
 ];
 let transfers=[];
+let income=[];      /* έσοδα ανά πηγή: {src,a,wallet,note} */
+let INCBUD={};      /* προϋπολογισμός εσόδων ανά πηγή */
 const KEY="apolog_"+CLOUD.key+"_v1";
-function metaOut(){return {title:A.title,dates:A.dates,paidia:A.paidia,epiteleio:A.epiteleio,all:A.all,dikaioma:A.dikaioma,hand:A.hand,loan:A.loan,reserveLabel:A.reserveLabel};}
-function metaIn(m){if(!m)return;["title","dates","paidia","epiteleio","all","dikaioma","hand","loan","reserveLabel"].forEach(function(k){if(m[k]!=null)A[k]=m[k];});}
+function metaOut(){return {title:A.title,dates:A.dates,paidia:A.paidia,epiteleio:A.epiteleio,all:A.all,dikaioma:A.dikaioma,hand:A.hand,loan:A.loan,reserveLabel:A.reserveLabel,notes:A.notes||""};}
+function metaIn(m){if(!m)return;["title","dates","paidia","epiteleio","all","dikaioma","hand","loan","reserveLabel","notes"].forEach(function(k){if(m[k]!=null)A[k]=m[k];});}
+function setNotes(v){A.notes=v;markDirty();save();}
 let counted=null,close={reserveReturned:false,leftoverDeposited:false};let budSoft={};
-function save(){try{localStorage.setItem(KEY,JSON.stringify({cats,pend,plan,CATBUD,wallets,transfers,counted,close,budSoft,meta:metaOut()}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;if(s.budSoft)budSoft=s.budSoft;metaIn(s.meta);}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,counted,close,budSoft,meta:metaOut()}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;if(s.budSoft)budSoft=s.budSoft;metaIn(s.meta);}}catch(e){}}
 function editSetup(){
  var t=prompt("Τίτλος δράσης:",A.title);if(t===null)return;A.title=t;
  var d=prompt("Υπότιτλος (ημ/νίες · άτομα · ταμείο):",A.dates);if(d!==null)A.dates=d;
@@ -484,6 +500,7 @@ function receiptsOf(e){ // πλήθος αποδείξεων + αν έχει φ�
   return {n:parts.length, files};
 }
 function handTotal(){
+ if(income&&income.length){return Math.round(income.reduce(function(s,x){return s+(+x.a||0);},0)*100)/100;} // έσοδα = πηγή αλήθειας
  if(+A.hand>0) return +A.hand;                       // αν ορίστηκε ρητά (π.χ. ΜΔΥ), χρήσε το
  var h=0; wallets.forEach(function(w){if(w.cash)h+=(+w.opening||0);});   // αλλιώς: Στο χέρι = εισροές cash πηγών
  transfers.forEach(function(t){var f=wallets.find(function(w){return w.id===t.from;}),to=wallets.find(function(w){return w.id===t.to;});
@@ -509,17 +526,25 @@ function renderUnpaid(){var card=document.getElementById("unpaidCard"),box=docum
 function render(){ensurePids();buildNos();
 document.getElementById("ttl").textContent=A.title;
 document.getElementById("sub").textContent=A.dates;
+var _nb=document.getElementById("notesBox");if(_nb&&document.activeElement!==_nb)_nb.value=A.notes||"";
 const t=tot();
 document.getElementById("footNote").textContent="Στο χέρι "+eur(t.hand);
 document.getElementById("c-hand").textContent=eur(t.hand);
 document.getElementById("c-spent").textContent=eur(t.spent);
-document.getElementById("c-left").textContent=eur(t.left);
+var _neg=t.left<-0.005;var _cl=document.getElementById("c-left");_cl.textContent=eur(t.left);_cl.style.color=_neg?"var(--red)":"";var _clk=_cl.previousElementSibling;if(_clk)_clk.textContent=_neg?"Από κάτω":"Μένουν";
 const R=reserveTotal(); const own=t.hand-R; const intoR=Math.max(0,R-t.left);
-const L=document.getElementById("loan");
+const L=document.getElementById("loan");L.style.cssText="";
 const pctOwn=own>0?Math.max(0,Math.min(100,(t.left-R)/own*100)):0;
 if(!R){
+if(_neg){
+var _defs=wallets.filter(function(w){return w.cash&&walletBalance(w.id)<-0.005;}).map(function(w){return w.name;});
+var _who=_defs.length?(' (λείπουν από: '+_defs.join(' / ')+')'):' πίσω στο ταμείο';
+L.className="loan";L.style.cssText="background:#f6dede;color:#b23b3b;border:1px solid #e3a0a0";
+L.innerHTML=`🔴 Πήγατε <b>${eur(-t.left)}</b> από κάτω — πρέπει να μπουν <b>${eur(-t.left)}</b> πίσω${_who}`;
+}else{
 L.className="loan safe";
 L.innerHTML=`Μένουν <b>${eur(t.left)}</b> διαθέσιμα`;
+}
 }else if(t.left>=R){
 L.className="loan safe";
 L.innerHTML=`✓ Δεν αγγίξατε το απόθεμα — διαθέσιμα (δικά μας): <b>${eur(t.left-R)}</b> (πάνω από το ${eur(R)} απόθεμα)
@@ -569,7 +594,7 @@ var badge=(st==='cancelled')?' <small style="color:var(--red)">✕ ακυρώθ�
 li.innerHTML=`<span class="chk" onclick="tog(${i})" title="τικ = έγινε"></span><span class="tx" onclick="openPendEdit(${i})" style="cursor:pointer">${p.t}${badge}</span>`
 +(st==='pending'?`<button class="p2" onclick="pendToPlan(${i})" title="Μετατροπή σε προγραμματισμένο έξοδο — μπαίνει στον «Σχεδιασμό επόμενων» με εκτίμηση κόστους, για να το συνδέσεις μετά με πραγματικό έξοδο">→ Σχεδιασμός εξόδου</button>`:'')
 +`<button class="p2" style="background:#f4f4f4;color:var(--muted)" onclick="openPendEdit(${i})" title="επεξεργασία">✎</button>`;pl.appendChild(li);});
-renderPlan(); renderWallets(); renderUnpaid(); renderMiss(); renderCatSummary(); renderRecon(); renderClose(); var _rt=document.getElementById("ap-report"); if(_rt&&!_rt.classList.contains("hide"))renderReport(); calc(); save();
+renderPlan(); renderIncome(); renderWallets(); renderUnpaid(); renderMiss(); renderCatSummary(); renderRecon(); renderClose(); var _rt=document.getElementById("ap-report"); if(_rt&&!_rt.classList.contains("hide"))renderReport(); calc(); save();
 }
 function renderWallets(){
  var box=document.getElementById("wallets");if(!box)return;
@@ -590,8 +615,53 @@ function renderWallets(){
  if(R)box.innerHTML+='<div><span class="t" style="color:var(--amber)">🔒 Αποθέματα'+(A.reserveLabel?' — '+A.reserveLabel:'')+' (επιστρεπτέο)</span><span style="color:var(--amber)">'+eur(R)+'</span></div>';
  if(untag)box.innerHTML+='<div><span class="t" style="color:var(--muted)">🧾 Από κοινό ταμείο (χωρίς ρητό wallet)</span><span style="color:var(--muted)">'+eur(Math.round(untag*100)/100)+'</span></div>';
  var tr=document.getElementById("transfers");
- tr.innerHTML=transfers.length?('<b>Μεταφορές:</b> '+transfers.map(function(t,i){return '<span onclick="delTransfer('+i+')" style="cursor:pointer" title="κλικ για διαγραφή">'+walletName(t.from)+' → '+walletName(t.to)+' '+eur(+t.a||0)+(t.note?' ('+t.note+')':'')+' ✕</span>';}).join(' · ')):'';
+ if(!transfers.length){tr.innerHTML='';}
+ else{
+  var totT=Math.round(transfers.reduce(function(s,t){return s+(+t.a||0);},0)*100)/100;
+  var routes={};transfers.forEach(function(t){routes[t.from+'>'+t.to]=1;});
+  var oneRoute=Object.keys(routes).length===1;
+  var head='<b>Μεταφορές'+(transfers.length>1?' ('+transfers.length+')':'')+':</b> ';
+  if(oneRoute){var t0=transfers[0];head+='<span style="color:var(--spkd)">'+walletName(t0.from)+' → '+walletName(t0.to)+'</span> · σύνολο <b>'+eur(totT)+'</b>';}
+  var items=transfers.map(function(t,i){
+   var lbl=t.note?t.note:(oneRoute?'':(walletName(t.from)+'→'+walletName(t.to)));
+   return '<span onclick="delTransfer('+i+')" style="cursor:pointer;display:inline-block;background:#eef3e7;border-radius:6px;padding:2px 8px;margin:3px 4px 0 0;white-space:nowrap" title="κλικ για διαγραφή">'+(lbl?lbl+' · ':'')+eur(+t.a||0)+' ✕</span>';
+  }).join('');
+  tr.innerHTML=head+'<div style="margin-top:6px">'+items+'</div>';
+ }
 }
+function incTotal(){return Math.round(income.reduce(function(s,x){return s+(+x.a||0);},0)*100)/100;}
+function incBudTotal(){return Math.round(Object.keys(INCBUD).reduce(function(s,k){return s+(+INCBUD[k]||0);},0)*100)/100;}
+function budExpTotal(){return Math.round(Object.keys(CATBUD).reduce(function(s,k){return s+(+CATBUD[k]||0);},0)*100)/100;}
+function renderIncome(){var box=document.getElementById("income");if(!box)return;
+ if(!income.length){box.innerHTML='<div style="color:var(--muted);font-size:12.5px">Καμία πηγή εσόδων ακόμη — πάτα «＋ Έσοδο / πηγή» (κατασκηνωτές, βαθμοφόροι, χορηγίες, ταμείο, Ε.Π.Σ., ακυρώσεις…).</div>';return;}
+ var h='';income.forEach(function(it,i){
+  var bud=INCBUD[it.src];var chip=(bud!=null)?' <small style="color:var(--muted)">(προϋπ. '+eur(bud)+')</small>':'';
+  var warn=it.flag?' <small style="color:var(--amber);font-weight:700">⚠</small>':'';
+  h+='<div onclick="editIncome('+i+')" style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>💶 '+(it.src||'(πηγή)')+warn+chip+'</span><span style="font-weight:700;white-space:nowrap;color:var(--spkd)">'+eur(+it.a||0)+' ✎</span></div>';});
+ var itot=incTotal(),ib=incBudTotal(),dInc=Math.round((itot-ib)*100)/100;
+ var t=tot(),bexp=budExpTotal(),bover=Math.round((t.spent-bexp)*100)/100,acc=t.left;
+ h+='<div style="border-top:2px solid var(--line);margin-top:6px;padding-top:8px;font-weight:800;display:flex;justify-content:space-between"><span>Σύνολο εσόδων</span><span>'+eur(itot)+'</span></div>';
+ if(ib)h+='<div style="font-size:12px;color:var(--muted);margin-top:2px">Προϋπ. έσοδα '+eur(ib)+' · <b style="color:'+(dInc>=0?'var(--ok)':'var(--red)')+'">'+(dInc>=0?'+':'−')+eur(Math.abs(dInc))+'</b> vs πλάνο</div>';
+ var rawOpen=Math.round(wallets.reduce(function(s,w){return s+(w.cash?(+w.opening||0):0);},0)*100)/100;
+ var chk=Math.round((itot-rawOpen)*100)/100;
+ if(Math.abs(chk)>0.05)h+='<div style="font-size:11.5px;color:var(--amber);margin-top:3px">⚠ Τα έσοδα ('+eur(itot)+') δεν ισούνται με τα αρχικά ταμεία ('+eur(rawOpen)+') — διαφορά '+eur(chk)+'</div>';
+ h+='<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px">';
+ h+='<div style="display:flex;justify-content:space-between"><span>Υπέρβαση προϋπολογισμού <small style="color:var(--muted)">(έξοδα − πλάνο εξόδων)</small></span><span style="font-weight:800;color:'+(bover>0?'var(--red)':'var(--ok)')+'">'+(bover>0?'+':'')+eur(bover)+'</span></div>';
+ h+='<div style="display:flex;justify-content:space-between;margin-top:4px"><span>Από κάτω ο λογαριασμός <small style="color:var(--muted)">(έσοδα − έξοδα)</small></span><span style="font-weight:800;color:'+(acc<-0.005?'var(--red)':'var(--ok)')+'">'+(acc<-0.005?'':'+')+eur(acc)+'</span></div>';
+ h+='</div>';
+ box.innerHTML=h;}
+function pickWalletIdx(promptLbl){if(!wallets.length)return null;var names=wallets.map(function(w,i){return i+": "+w.name;}).join("\n");var wi=parseInt(prompt(promptLbl+"\n"+names,"0"));return(!isNaN(wi)&&wallets[wi])?wallets[wi].id:null;}
+function addIncome(){var s=prompt("Πηγή εσόδου (π.χ. Από κατασκηνωτές, Από βαθμοφόρους, Χορηγία/Δωρεά, Ταμείο Τμήματος, Ενίσχυση Ε.Π.Σ., Ακυρώσεις):");if(!s)return;
+ var a=parseFloat(prompt("Ποσό (€):","0"));if(isNaN(a))a=0;
+ var w=pickWalletIdx("Σε ποιο ταμείο μπήκε;");
+ var b=parseFloat(prompt("Προϋπολογισμός γι' αυτή την πηγή (€ — κενό αν κανένας):",""));
+ snap();income.push({src:s,a:a,wallet:w});if(!isNaN(b))INCBUD[s]=b;markDirty();render();}
+function editIncome(i){var it=income[i];if(!it)return;
+ var s=prompt("Πηγή:",it.src);if(s===null)return;
+ var a=parseFloat(prompt("Ποσό (€):",String(it.a)));
+ snap();if(s)it.src=s;if(!isNaN(a))it.a=a;
+ if(confirm("Διαγραφή αυτής της πηγής; (OK=διαγραφή / Άκυρο=κράτα)")){income.splice(i,1);}
+ markDirty();render();}
 function addWallet(){var n=prompt("Όνομα πηγής (π.χ. Wallet Μαρίας):");if(!n)return;
  var op=parseFloat(prompt("Αρχικό ποσό (€):","0"))||0;
  var cash=confirm("Είναι μετρητά «στο χέρι»; (OK=ναι / Άκυρο=τράπεζα/ταμείο)");
@@ -1148,7 +1218,7 @@ cstat("⏳ Φόρτωση από το κοινό ταμείο…");
 try{
 const r=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now());
 const s=await r.json();
-if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
+if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
 cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
 else{cstat("ℹ️ Κοινό ταμείο άδειο — πάτα «☁ Αποθήκευση» για αρχικοποίηση.");}
 }catch(e){cstat("⚠️ Δεν φόρτωσε — έλεγξε URL/σύνδεση. Δουλεύεις τοπικά.");}
@@ -1157,7 +1227,7 @@ async function cloudSave(){
 if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
 if(!CLOUD.key){alert("Δεν έχει οριστεί δράση.");return;}
 cstat("⏳ Αποθήκευση στο κοινό ταμείο…");
-async function doSave(){const body=JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,counted,close,budSoft,meta:metaOut()}});const r=await fetch(CLOUD.url,{method:"POST",body});return await r.json();}
+async function doSave(){const body=JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,counted,close,budSoft,meta:metaOut()}});const r=await fetch(CLOUD.url,{method:"POST",body});return await r.json();}
 try{
 let s=await doSave();
 if(s&&s.error==="pin-required"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){cstat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();s=await doSave();}
