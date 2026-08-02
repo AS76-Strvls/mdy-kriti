@@ -137,6 +137,17 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 .aptab{flex:1;min-width:74px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:700;border-radius:10px;padding:10px 8px;font-size:13px;cursor:pointer}
 .aptab.on{background:var(--spk);color:#fff;border-color:var(--spk)}
 @media(min-width:860px){ #aptabs{max-width:980px;margin-left:auto;margin-right:auto} }
+/* ---- Μικρές οθόνες (κινητό): να μη ξεχειλώνουν/κόβονται έσοδα & έξοδα ---- */
+@media(max-width:600px){
+  .prep, #income{overflow-wrap:anywhere;word-break:break-word}
+  #income>div span, .cat .log>div span{min-width:0}
+  .cat .hd{align-items:flex-start}
+  .cat .hd .nm{min-width:0}
+  .cat .hd small{white-space:normal;line-height:1.45;display:inline-block;margin-top:1px}
+  .cash .box .v{font-size:16px}
+  .cash .box.big .v{font-size:17px}
+  .cash .box .k{font-size:9.5px;letter-spacing:.02em}
+}
 @media print{
  .aptabs,#undoBar,#cloudCard,.ov,.cropov,#ovpend,button,.foot{display:none!important}
  body{background:#fff}
