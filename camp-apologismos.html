@@ -132,7 +132,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
   .sheet{border-radius:14px;max-width:600px;max-height:88vh}
   #undoBar{left:50%;transform:translateX(-50%);max-width:420px;border-radius:10px 10px 0 0}
 }
-@media(min-width:1200px){ .wrap{max-width:1100px} }
+@media(min-width:1200px){ .wrap{max-width:1400px} }
+@media(min-width:1700px){ .wrap{max-width:96vw;column-count:3} }
 .aptabs{display:flex;gap:5px;margin:0 0 12px;flex-wrap:wrap}
 .aptab{flex:1;min-width:74px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:700;border-radius:10px;padding:10px 8px;font-size:13px;cursor:pointer}
 .aptab.on{background:var(--spk);color:#fff;border-color:var(--spk)}
@@ -657,8 +658,10 @@ function renderIncome(){var box=document.getElementById("income");if(!box)return
  var chk=Math.round((itot-rawOpen)*100)/100;
  if(Math.abs(chk)>0.05)h+='<div style="font-size:11.5px;color:var(--amber);margin-top:3px">⚠ Τα έσοδα ('+eur(itot)+') δεν ισούνται με τα αρχικά ταμεία ('+eur(rawOpen)+') — διαφορά '+eur(chk)+'</div>';
  h+='<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px">';
- h+='<div style="display:flex;justify-content:space-between"><span>Υπέρβαση προϋπολογισμού <small style="color:var(--muted)">(έξοδα − πλάνο εξόδων)</small></span><span style="font-weight:800;color:'+(bover>0?'var(--red)':'var(--ok)')+'">'+(bover>0?'+':'')+eur(bover)+'</span></div>';
- h+='<div style="display:flex;justify-content:space-between;margin-top:4px"><span>Από κάτω ο λογαριασμός <small style="color:var(--muted)">(έσοδα − έξοδα)</small></span><span style="font-weight:800;color:'+(acc<-0.005?'var(--red)':'var(--ok)')+'">'+(acc<-0.005?'':'+')+eur(acc)+'</span></div>';
+ var bOver=bover>0.005, bLbl=bOver?'Υπέρβαση προϋπολογισμού':'Κάτω από τον προϋπολογισμό';
+ h+='<div style="display:flex;justify-content:space-between;gap:10px"><span>'+bLbl+' <small style="color:var(--muted)">(έξοδα − πλάνο)</small></span><span style="font-weight:800;white-space:nowrap;color:'+(bOver?'var(--red)':'var(--ok)')+'">'+(bOver?'+':'−')+eur(Math.abs(bover))+'</span></div>';
+ var aNeg=acc<-0.005, aLbl=aNeg?'Από κάτω ο λογαριασμός':'Πλεόνασμα (μένουν)';
+ h+='<div style="display:flex;justify-content:space-between;margin-top:4px;gap:10px"><span>'+aLbl+' <small style="color:var(--muted)">(έσοδα − έξοδα)</small></span><span style="font-weight:800;white-space:nowrap;color:'+(aNeg?'var(--red)':'var(--ok)')+'">'+(aNeg?'−':'+')+eur(Math.abs(acc))+'</span></div>';
  h+='</div>';
  box.innerHTML=h;}
 function pickWalletIdx(promptLbl){if(!wallets.length)return null;var names=wallets.map(function(w,i){return i+": "+w.name;}).join("\n");var wi=parseInt(prompt(promptLbl+"\n"+names,"0"));return(!isNaN(wi)&&wallets[wi])?wallets[wi].id:null;}
@@ -1050,7 +1053,7 @@ function renderRecon(){var box=document.getElementById("recon");if(!box)return;
 function toggleClose(k){close[k]=!close[k];markDirty();renderClose();save();}
 function renderClose(){var box=document.getElementById("closeBox");if(!box)return;
  var R=reserveTotal(),left=tot().left,lbl=(A&&A.reserveLabel)?' ('+A.reserveLabel+')':'';
- var ppl=wallets.filter(function(w){return w.cash;}).map(function(w){var b=walletBalance(w.id);return '<div><span class="t">'+w.name+' κρατά</span><span style="font-weight:700;color:'+(b<0?'var(--red)':'var(--spkd)')+'">'+eur(b)+'</span></div>';}).join('');
+ var ppl=wallets.filter(function(w){return w.cash;}).map(function(w){var b=walletBalance(w.id);var neg=b<-0.005;return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span class="t">'+(neg?('λείπουν από '+w.name):(w.name+' κρατά'))+'</span><span style="font-weight:800;white-space:nowrap;color:'+(neg?'var(--red)':'var(--spkd)')+'">'+eur(b)+'</span></div>';}).join('');
  function step(k,label,amt,hint){return '<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line)"><span onclick="toggleClose(\''+k+'\')" style="cursor:pointer;width:22px;height:22px;border:2px solid var(--spkl);border-radius:6px;flex:0 0 auto;margin-top:1px;'+(close[k]?'background:var(--spk);border-color:var(--spk)':'')+'"></span><span style="flex:1;font-size:13.5px"><b>'+label+'</b> '+(amt!=null?'<b style="color:var(--spkd)">'+eur(amt)+'</b>':'')+(close[k]?' <small style="color:var(--ok)">✓ έγινε</small>':'')+(hint?'<br><small style="color:var(--muted)">'+hint+'</small>':'')+'</span></div>';}
  var steps='',shown=[];
  if(R<=0.005){ steps=step('leftoverDeposited','Επίστρεψε/κατάθεσε τα μετρητά που μένουν',left,'Στο ταμείο ή σε λογαριασμό.'); shown=['leftoverDeposited']; }
