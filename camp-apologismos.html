@@ -188,6 +188,14 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <div class="dirty" id="dirtyNote" style="display:none;padding:0 14px 12px">● Μη αποθηκευμένες αλλαγές — πάτα «☁ Αποθήκευση» για να τις δουν οι άλλοι.</div>
 </div>
 <div class="card">
+<h2>Αποδείξεις — υποβολή &amp; εγκρίσεις <span id="subCount" style="text-transform:none;font-weight:700;color:var(--amber)"></span></h2>
+<div style="padding:6px 14px 12px">
+<button class="add-cat" style="width:auto;padding:10px 14px;font-size:15px" onclick="openSub()">📤 Υπόβαλε απόδειξη / αίτημα</button>
+<div class="foot" style="text-align:left;padding:6px 0 0">Οποιοσδήποτε με τον σύνδεσμο υποβάλλει (μπαίνει «προς έγκριση»)· ο ταμίας με PIN εγκρίνει &amp; σημειώνει επιστροφές.</div>
+<div id="subQueue" style="margin-top:10px"></div>
+</div>
+</div>
+<div class="card">
 <h2>Έσοδα / πηγές χρημάτων <span style="text-transform:none;font-weight:400">κατασκηνωτές · βαθμοφόροι · χορηγίες · ταμείο · Ε.Π.Σ. · ακυρώσεις</span></h2>
 <div class="prep" id="income" style="padding:10px 14px 4px"></div>
 <div class="row" style="padding:4px 14px 12px;gap:8px;flex-wrap:wrap">
@@ -370,19 +378,44 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 </div>
 <div id="home" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:60;overflow:auto;padding:22px 16px">
 <div style="max-width:520px;margin:0 auto">
-<h2 style="color:var(--spkd)">Οικονομικός Απολογισμός Δράσης</h2>
+<h2 style="color:var(--spkd)">Οικονομικός Απολογισμός Δράσεων</h2>
 <div class="card"><div style="padding:14px">
 <div style="font-weight:800;color:var(--spkd);margin-bottom:8px">Άνοιξε δράση</div>
 <input id="homeKey" placeholder="key ή link της δράσης" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;box-sizing:border-box">
 <button class="add-cat" style="width:auto;padding:9px 14px;margin-top:8px" onclick="homeOpen()">Άνοιγμα</button>
 </div></div>
 <div class="card"><div style="padding:14px">
-<div style="font-weight:800;color:var(--spkd);margin-bottom:8px">Διαχείριση (admin)</div>
+<div style="font-weight:800;color:var(--spkd);margin-bottom:6px">➕ Νέα δράση <span style="font-weight:400;color:var(--muted);font-size:12px">— ανοιχτό για όλους</span></div>
+<div id="newActionForm"></div>
+</div></div>
+<div style="text-align:center;margin:2px 0 14px"><button class="pbuy" style="padding:7px 13px" onclick="toggleAdmin()">🔒 Διαχείριση (admin)</button></div>
+<div class="card" id="adminCard" style="display:none"><div style="padding:14px">
+<div style="font-weight:800;color:var(--spkd);margin-bottom:8px">Διαχείριση (admin) <span style="font-weight:400;color:var(--muted);font-size:12px">— όλες οι δράσεις &amp; PINs</span></div>
 <input id="homeAdmin" type="password" placeholder="admin PIN" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;box-sizing:border-box">
 <button class="add-cat" style="width:auto;padding:9px 14px;margin-top:8px" onclick="adminLoad()">Είσοδος</button>
 <div id="adminList" style="margin-top:12px"></div>
-<div id="newActionForm" style="display:none;margin-top:10px"></div>
 </div></div>
+</div></div>
+<div id="subOv" style="display:none;position:fixed;inset:0;background:rgba(30,40,15,.5);z-index:70;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeSub()">
+<div style="background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:16px;box-sizing:border-box">
+<h3 style="margin:0 0 4px;color:var(--spkd)">📤 Υπόβαλε απόδειξη</h3>
+<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Μπαίνει «προς έγκριση». Αν τα πλήρωσες εσύ, ζήτα επιστροφή.</div>
+<label style="font-size:12px;color:var(--muted)">Ποιος υποβάλλει (όνομά σου) *</label>
+<input id="subWho" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
+<label style="font-size:12px;color:var(--muted)">Τι αφορά (προμηθευτής / έξοδο) *</label>
+<input id="subExp" placeholder="π.χ. Lidl, καύσιμα, σουπερμάρκετ…" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
+<label style="font-size:12px;color:var(--muted)">Ποσό (€)</label>
+<input id="subAmt" type="number" inputmode="decimal" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
+<label style="display:flex;align-items:center;gap:9px;margin:4px 0 10px;font-size:14px;cursor:pointer"><input id="subReimb" type="checkbox" style="width:18px;height:18px"> <span>💶 Αιτούμαι επιστροφή — τα πλήρωσα εγώ</span></label>
+<label style="font-size:12px;color:var(--muted)">Σημείωση (προαιρ.)</label>
+<input id="subNote" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
+<label style="display:inline-block;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:9px;padding:10px 14px;cursor:pointer">📎 Φώτο / PDF απόδειξης<input id="subFile" type="file" accept="image/*,application/pdf" style="display:none" onchange="subPickFile(this.files[0])"></label>
+<div id="subThumb" style="margin-top:8px;font-size:12px;color:var(--spkl)"></div>
+<div id="subMsg" style="margin-top:10px;font-size:13px"></div>
+<div style="display:flex;gap:8px;margin-top:14px">
+<button class="b-save" style="background:var(--spk);color:#fff;border:0;border-radius:9px;padding:11px 18px;font-weight:800;font-size:15px" onclick="doSubmitReceipt()">Υποβολή</button>
+<button style="background:#eef3e7;color:var(--ink);border:0;border-radius:9px;padding:11px 16px;font-weight:700" onclick="closeSub()">Άκυρο</button>
+</div>
 </div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -408,13 +441,14 @@ let wallets=[
 let transfers=[];
 let income=[];      /* έσοδα ανά πηγή: {src,a,wallet,note} */
 let INCBUD={};      /* προϋπολογισμός εσόδων ανά πηγή */
+let subs=[];        /* ουρά υποβολών αποδείξεων (pending→approved) + αιτήματα επιστροφής */
 const KEY="apolog_"+CLOUD.key+"_v1";
 function metaOut(){return {title:A.title,dates:A.dates,paidia:A.paidia,epiteleio:A.epiteleio,all:A.all,dikaioma:A.dikaioma,hand:A.hand,loan:A.loan,reserveLabel:A.reserveLabel,notes:A.notes||""};}
 function metaIn(m){if(!m)return;["title","dates","paidia","epiteleio","all","dikaioma","hand","loan","reserveLabel","notes"].forEach(function(k){if(m[k]!=null)A[k]=m[k];});}
 function setNotes(v){A.notes=v;markDirty();save();}
 let counted=null,close={reserveReturned:false,leftoverDeposited:false};let budSoft={};
-function save(){try{localStorage.setItem(KEY,JSON.stringify({cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,counted,close,budSoft,meta:metaOut()}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;if(s.budSoft)budSoft=s.budSoft;metaIn(s.meta);}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut()}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;if(s.subs)subs=s.subs;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;if(s.budSoft)budSoft=s.budSoft;metaIn(s.meta);}}catch(e){}}
 function editSetup(){
  var t=prompt("Τίτλος δράσης:",A.title);if(t===null)return;A.title=t;
  var d=prompt("Υπότιτλος (ημ/νίες · άτομα · ταμείο):",A.dates);if(d!==null)A.dates=d;
@@ -606,7 +640,7 @@ var badge=(st==='cancelled')?' <small style="color:var(--red)">✕ ακυρώθ�
 li.innerHTML=`<span class="chk" onclick="tog(${i})" title="τικ = έγινε"></span><span class="tx" onclick="openPendEdit(${i})" style="cursor:pointer">${p.t}${badge}</span>`
 +(st==='pending'?`<button class="p2" onclick="pendToPlan(${i})" title="Μετατροπή σε προγραμματισμένο έξοδο — μπαίνει στον «Σχεδιασμό επόμενων» με εκτίμηση κόστους, για να το συνδέσεις μετά με πραγματικό έξοδο">→ Σχεδιασμός εξόδου</button>`:'')
 +`<button class="p2" style="background:#f4f4f4;color:var(--muted)" onclick="openPendEdit(${i})" title="επεξεργασία">✎</button>`;pl.appendChild(li);});
-renderPlan(); renderIncome(); renderWallets(); renderUnpaid(); renderMiss(); renderCatSummary(); renderRecon(); renderClose(); var _rt=document.getElementById("ap-report"); if(_rt&&!_rt.classList.contains("hide"))renderReport(); calc(); save();
+renderPlan(); renderIncome(); renderWallets(); renderUnpaid(); renderMiss(); renderCatSummary(); renderRecon(); renderClose(); renderSubs(); var _rt=document.getElementById("ap-report"); if(_rt&&!_rt.classList.contains("hide"))renderReport(); calc(); save();
 }
 function renderWallets(){
  var box=document.getElementById("wallets");if(!box)return;
@@ -641,6 +675,67 @@ function renderWallets(){
   tr.innerHTML=head+'<div style="margin-top:6px">'+items+'</div>';
  }
 }
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+/* ── Ουρά υποβολών αποδείξεων (submit → approve · αιτήματα επιστροφής) ── */
+var SUBFILE=null;
+function openSub(){SUBFILE=null;["subWho","subExp","subAmt","subNote"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var rb=document.getElementById("subReimb");if(rb)rb.checked=false;var m=document.getElementById("subMsg");if(m)m.textContent="";var t=document.getElementById("subThumb");if(t)t.textContent="";document.getElementById("subOv").style.display="flex";}
+function closeSub(){document.getElementById("subOv").style.display="none";}
+function subPickFile(f){if(!f)return;var r=new FileReader();r.onload=function(){SUBFILE={name:f.name,type:f.type||'',data:r.result};var t=document.getElementById("subThumb");if(t)t.innerHTML=((f.type||'').indexOf('image')>=0?'<img src="'+r.result+'" style="height:60px;border-radius:6px;border:1px solid var(--line)">':'📄 '+esc(f.name));};r.readAsDataURL(f);}
+async function doSubmitReceipt(){
+ var who=(document.getElementById("subWho").value||"").trim();
+ var exp=(document.getElementById("subExp").value||"").trim();
+ var msg=document.getElementById("subMsg");
+ if(!who){msg.innerHTML='<span style="color:var(--red)">Βάλε το όνομά σου.</span>';return;}
+ if(!exp){msg.innerHTML='<span style="color:var(--red)">Βάλε τι αφορά (προμηθευτής/έξοδο).</span>';return;}
+ var amt=parseFloat(document.getElementById("subAmt").value)||0;
+ var note=(document.getElementById("subNote").value||"").trim();
+ var reimb=document.getElementById("subReimb").checked;
+ if(!CLOUD.url){subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,url:SUBFILE?SUBFILE.data:'',fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
+ msg.textContent="⏳ Υποβολή…";
+ try{
+  var body=JSON.stringify({action:"submitReceipt",key:CLOUD.key,submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,file:SUBFILE});
+  await fetch(CLOUD.url,{method:"POST",body});
+  msg.innerHTML='<span style="color:#2f7d32;font-weight:700">✅ Υποβλήθηκε — προς έγκριση. Ευχαριστούμε!</span>';
+  setTimeout(function(){closeSub();cloudLoad();},1300);
+ }catch(e){msg.innerHTML='<span style="color:var(--red)">⚠ Δεν στάλθηκε — έλεγξε σύνδεση.</span>';}
+}
+function subPending(){return subs.filter(function(x){return (x.status||'pending')!=='approved'&&x.status!=='rejected';});}
+function subOwed(){return subs.filter(function(x){return x.reimburse&&x.status==='approved'&&!x.paid;});}
+function renderSubs(){
+ var box=document.getElementById("subQueue");if(!box)return;
+ var cnt=document.getElementById("subCount");var p=subPending().length,o=subOwed().length;
+ if(cnt)cnt.textContent=(p?('· '+p+' προς έγκριση'):'')+(o?('  · '+o+' προς πληρωμή'):'');
+ var canEd=!!(SESSION.pin||SESSION.admin);
+ if(!subs.length){box.innerHTML='<div style="color:var(--muted);font-size:12.5px">Καμία υποβολή ακόμη — πάτα «📤 Υπόβαλε απόδειξη».</div>';return;}
+ var h='';subs.slice().reverse().forEach(function(s){
+  var idx=subs.indexOf(s);var st=s.status||'pending';
+  var badge=st==='approved'?'<span style="color:#2f7d32">✓ εγκρίθηκε</span>':(st==='rejected'?'<span style="color:var(--red)">✕ απορρίφθηκε</span>':'<span style="color:var(--amber)">⏳ προς έγκριση</span>');
+  var isPdf=/\.pdf/i.test(s.fname||'')||/pdf/i.test(s.url||'');
+  var thumb=s.url?('<a href="'+s.url+'" target="_blank">'+(isPdf?'📄':'<img src="'+s.url+'" style="height:44px;width:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">')+'</a>'):'<span title="χωρίς φωτό">📷✗</span>';
+  var reimb=s.reimburse?(' · <b style="color:'+(s.paid?'#2f7d32':'var(--amber)')+'">💶 επιστροφή '+(s.paid?'✓ πληρώθηκε':'εκκρεμεί')+'</b>'):'';
+  h+='<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">';
+  h+='<div style="flex:0 0 auto">'+thumb+'</div>';
+  h+='<div style="flex:1;min-width:0;font-size:12.5px"><b>'+esc(s.exp||'(έξοδο)')+'</b> '+(s.amount?'<b>'+eur(s.amount)+'</b>':'')+'<div style="color:var(--muted);overflow-wrap:anywhere">από '+esc(s.submitter||'—')+' · '+badge+reimb+(s.note?' · '+esc(s.note):'')+'</div></div>';
+  if(canEd){h+='<div style="flex:0 0 auto;display:flex;flex-direction:column;gap:4px">';
+   if(st==='pending'){h+='<button class="pbuy" style="padding:5px 9px" onclick="approveSub('+idx+')">✓ Έγκριση</button><button class="pbuy" style="padding:5px 9px;color:var(--red)" onclick="rejectSub('+idx+')">✕ Απόρ.</button>';}
+   if(s.reimburse&&st==='approved'&&!s.paid){h+='<button class="pbuy" style="padding:5px 9px" onclick="markPaid('+idx+')">💶 Πληρώθηκε</button>';}
+   if(st==='rejected'){h+='<button class="pbuy" style="padding:5px 9px" onclick="unrejectSub('+idx+')">↺</button>';}
+   h+='</div>';}
+  h+='</div>';});
+ box.innerHTML=h;
+}
+function needPin(){if(!(SESSION.pin||SESSION.admin)){unlockEdit();return true;}return false;}
+function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
+ var names=cats.map(function(c,k){return k+": "+c.n;}).join("\n");
+ var ci=parseInt(prompt("Έγκριση «"+(s.exp||'')+"» "+eur(+s.amount||0)+"\nΣε ποια κατηγορία; δώσε αριθμό:\n"+names,"0"));
+ if(isNaN(ci)||!cats[ci])return;
+ var cw=(wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'';
+ var e={t:s.exp||'(έξοδο)',a:Math.round((+s.amount||0)*100)/100,vendor:s.exp||'',payer:s.submitter||'',wallet:cw};
+ if(s.url)e.parts=[{a:e.a,note:s.note||'',d:'',url:s.url,fname:s.fname||''}];
+ snap();cats[ci].log.push(e);cats[ci].open=true;s.status='approved';s.approvedTs=today();markDirty();render();if(CLOUD.url)cloudSave();else save();}
+function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("Απόρριψη αυτής της υποβολής;"))return;snap();s.status='rejected';markDirty();render();if(CLOUD.url)cloudSave();else save();}
+function unrejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;s.status='pending';markDirty();render();if(CLOUD.url)cloudSave();else save();}
+function markPaid(i){var s=subs[i];if(!s)return;if(needPin())return;snap();s.paid=true;s.paidTs=today();markDirty();render();if(CLOUD.url)cloudSave();else save();}
 function incTotal(){return Math.round(income.reduce(function(s,x){return s+(+x.a||0);},0)*100)/100;}
 function incBudTotal(){return Math.round(Object.keys(INCBUD).reduce(function(s,k){return s+(+INCBUD[k]||0);},0)*100)/100;}
 function budExpTotal(){return Math.round(Object.keys(CATBUD).reduce(function(s,k){return s+(+CATBUD[k]||0);},0)*100)/100;}
@@ -1232,7 +1327,7 @@ cstat("⏳ Φόρτωση από το κοινό ταμείο…");
 try{
 const r=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now());
 const s=await r.json();
-if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
+if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;subs=s.subs||[];if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
 cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
 else{cstat("ℹ️ Κοινό ταμείο άδειο — πάτα «☁ Αποθήκευση» για αρχικοποίηση.");}
 }catch(e){cstat("⚠️ Δεν φόρτωσε — έλεγξε URL/σύνδεση. Δουλεύεις τοπικά.");}
@@ -1241,7 +1336,7 @@ async function cloudSave(){
 if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
 if(!CLOUD.key){alert("Δεν έχει οριστεί δράση.");return;}
 cstat("⏳ Αποθήκευση στο κοινό ταμείο…");
-async function doSave(){const body=JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,counted,close,budSoft,meta:metaOut()}});const r=await fetch(CLOUD.url,{method:"POST",body});return await r.json();}
+async function doSave(){const body=JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut()}});const r=await fetch(CLOUD.url,{method:"POST",body});return await r.json();}
 try{
 let s=await doSave();
 if(s&&s.error==="pin-required"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){cstat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();s=await doSave();}
@@ -1258,7 +1353,8 @@ function updFloat(){var fb=document.getElementById("floatbar");if(!fb)return;if(
 function updLock(){updFloat();var el=document.getElementById("lockRow");if(!el)return;if(SESSION.admin){el.innerHTML='<span style="color:#2f7d32;font-weight:700">🔓 Admin — πλήρη δικαιώματα</span>';}else if(SESSION.pin){el.innerHTML='<span style="color:#2f7d32;font-weight:700">🔓 Edit ξεκλείδωτο</span> <button class="pbuy" style="padding:5px 9px" onclick="lockEdit()">🔒 Κλείδωσε</button>';}else{el.innerHTML='<span style="color:var(--amber);font-weight:700">🔒 Θέα μόνο</span> <button class="pbuy" style="padding:5px 9px" onclick="unlockEdit()">🔓 Ξεκλείδωμα (PIN)</button>';}}
 function unlockEdit(){var p=prompt("🔒 PIN δράσης για αλλαγές:");if(p==null)return;SESSION.pin=p;try{localStorage.setItem('apolog_pin_'+CLOUD.key,p);}catch(e){}updLock();cstat("🔓 PIN αποθηκεύτηκε — επιβεβαιώνεται στην πρώτη «☁ Αποθήκευση».");}
 function lockEdit(){SESSION.pin="";try{localStorage.removeItem('apolog_pin_'+CLOUD.key);}catch(e){}updLock();}
-function showHome(){var el=document.getElementById("home");if(el)el.style.display="block";}
+function showHome(){var el=document.getElementById("home");if(el)el.style.display="block";try{newActionUI();}catch(e){}}
+function toggleAdmin(){var c=document.getElementById("adminCard");if(c)c.style.display=(c.style.display==="none"?"":"none");}
 function openKey(k){location.search="?a="+encodeURIComponent(k);}
 function homeOpen(){var v=(document.getElementById("homeKey").value||"").trim();if(!v)return;var m=v.match(/[?&]a=([^&]+)/);openKey(m?decodeURIComponent(m[1]):v);}
 async function adminLoad(){var pin=(document.getElementById("homeAdmin").value||"").trim();if(!pin)return;var box=document.getElementById("adminList");
