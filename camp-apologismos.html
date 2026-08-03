@@ -1416,25 +1416,35 @@ function showHome(){var el=document.getElementById("home");if(el)el.style.displa
 function toggleAdmin(){var c=document.getElementById("adminCard");if(c)c.style.display=(c.style.display==="none"?"":"none");}
 function openKey(k){location.search="?a="+encodeURIComponent(k);}
 function hmsg(html){var b=document.getElementById("homeMsg");if(b)b.innerHTML=html;}
+async function resolveVal(v){                                /* text()+parse + retry (Apps Script cold-start γυρνά HTML) */
+ for(var i=0;i<3;i++){
+  try{
+   var r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"resolve",value:v})});
+   var t=await r.text();
+   var s=JSON.parse(t);
+   if(s&&s.ok)return s;
+  }catch(e){}
+  await new Promise(function(res){setTimeout(res,900);});
+ }
+ return null;
+}
 async function homeOpen(){
  var v=(document.getElementById("homeKey").value||"").trim();if(!v)return;
  var m=v.match(/[?&]a=([^&]+)/);
  if(m){openKey(decodeURIComponent(m[1]));return;}           /* full link → κωδικός */
  if(!CLOUD.url){openKey(v);return;}                          /* χωρίς cloud → δοκίμασε ως κωδικό */
  hmsg("<span style='color:var(--muted)'>⏳ Αναζήτηση…</span>");
- try{
-  var r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"resolve",value:v})});
-  var s=await r.json();
-  if(s&&s.asKey){openKey(v);return;}                         /* ταιριάζει κωδικός δράσης */
-  var bp=(s&&s.byPin)||[];
-  if(bp.length===1){openKey(bp[0].key);return;}              /* ένα PIN → μία δράση */
-  if(bp.length>1){                                           /* ίδιο PIN σε πολλές → επιλογή */
-   var h="<div style='font-weight:700;color:var(--spkd);margin-bottom:6px'>Αυτό το PIN ταιριάζει σε "+bp.length+" δράσεις — διάλεξε:</div>";
-   bp.forEach(function(x){h+="<button class='add-cat' style='width:100%;text-align:left;margin-top:6px;padding:9px 12px' onclick=\"openKey('"+esc(x.key).replace(/'/g,"\\'")+"')\">"+esc(x.title||x.key)+" <span style='color:var(--muted);font-weight:400'>("+esc(x.key)+")</span></button>";});
-   hmsg(h);return;
-  }
-  hmsg("<span style='color:var(--red)'>🚫 Δεν βρέθηκε δράση με αυτόν τον κωδικό ή PIN.</span>");
- }catch(e){openKey(v);}                                      /* σφάλμα δικτύου → δοκίμασε ως κωδικό */
+ var s=await resolveVal(v);
+ if(!s){hmsg("<span style='color:var(--red)'>⚠ Δεν απάντησε ο διακομιστής — δοκίμασε ξανά σε λίγο.</span>");return;}
+ if(s.asKey){openKey(v);return;}                             /* ταιριάζει κωδικός δράσης */
+ var bp=s.byPin||[];
+ if(bp.length===1){openKey(bp[0].key);return;}              /* ένα PIN → μία δράση */
+ if(bp.length>1){                                            /* ίδιο PIN σε πολλές → επιλογή */
+  var h="<div style='font-weight:700;color:var(--spkd);margin-bottom:6px'>Αυτό το PIN ταιριάζει σε "+bp.length+" δράσεις — διάλεξε:</div>";
+  bp.forEach(function(x){h+="<button class='add-cat' style='width:100%;text-align:left;margin-top:6px;padding:9px 12px' onclick=\"openKey('"+esc(x.key).replace(/'/g,"\\'")+"')\">"+esc(x.title||x.key)+" <span style='color:var(--muted);font-weight:400'>("+esc(x.key)+")</span></button>";});
+  hmsg(h);return;
+ }
+ hmsg("<span style='color:var(--red)'>🚫 Δεν βρέθηκε δράση με αυτόν τον κωδικό ή PIN.</span>");
 }
 async function adminLoad(){var pin=(document.getElementById("homeAdmin").value||"").trim();if(!pin)return;var box=document.getElementById("adminList");
  if(!CLOUD.url){box.innerHTML='<span style="color:var(--amber)">Δεν έχει οριστεί CLOUD.url (deploy).</span>';return;}
