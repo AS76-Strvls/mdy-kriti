@@ -703,6 +703,7 @@ async function doSubmitReceipt(){
  var reimb=(pay==='me');
  if(pay==='other')note=('Πλήρωσε άλλος. '+note).trim();
  if(pay==='unpaid')note=('⚠ ΑΠΛΗΡΩΤΟ — να πληρωθεί ο προμηθευτής. '+note).trim();
+ if(SUBFILE){try{SUBFILE.name=recFilename(today(),exp,who,amt,extOf(SUBFILE.type,SUBFILE.name));}catch(e){}}
  if(!CLOUD.url){var _u=SUBFILE?(/^data:/.test(SUBFILE.data)?SUBFILE.data:('data:'+(SUBFILE.type||'image/jpeg')+';base64,'+SUBFILE.data)):'';subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,url:_u,fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
  msg.textContent="⏳ Υποβολή…";
  try{
@@ -976,6 +977,16 @@ function partFile(i,file){ if(!file)return;
 }
 function enhanceCtx(ctx,w,h){try{var id=ctx.getImageData(0,0,w,h),d=id.data,K=1.18,B=6;for(var p=0;p<d.length;p+=4){d[p]=Math.min(255,(d[p]-128)*K+128+B);d[p+1]=Math.min(255,(d[p+1]-128)*K+128+B);d[p+2]=Math.min(255,(d[p+2]-128)*K+128+B);}ctx.putImageData(id,0,0);}catch(e){}}
 function canvasToFile(c,file){var url=c.toDataURL("image/jpeg",0.82);var name=(((file&&file.name)||"apodeixi").replace(/\.[^.]+$/,''))+".jpg";return{name:name,type:"image/jpeg",data:url.replace(/^data:[^,]*,/,'')};}
+/* Ουσιαστικό όνομα αρχείου απόδειξης: ΗΜ/ΝΙΑ_Προμηθευτής_Ποσό€_Πληρωτής.jpg (εύκολος συσχετισμός) */
+function sanFn(s){return String(s==null?'':s).replace(/[\\\/:*?"<>|·]+/g,'-').replace(/\s+/g,' ').replace(/^[-_ ]+|[-_ ]+$/g,'').slice(0,50);}
+function recFilename(d,vendor,payer,amount,ext){
+ var parts=[(d||today())];
+ var v=sanFn(vendor);if(v)parts.push(v);
+ var a=(+amount||0);if(a)parts.push(a.toFixed(2).replace('.',',')+'€');
+ var pl=sanFn(payer);if(pl&&pl!=='—')parts.push(pl);
+ return parts.join('_')+'.'+(ext||'jpg');
+}
+function extOf(t,fn){if(/pdf/i.test(t||'')||/\.pdf$/i.test(fn||''))return 'pdf';if(/png/i.test(t||''))return 'jpg';return 'jpg';}
 var CROP=null;
 function openCrop(file,cb){
   function ready(bmp,w,h){var WMAX=1500,s=Math.min(1,WMAX/Math.max(w,h)),sw=Math.max(1,Math.round(w*s)),sh=Math.max(1,Math.round(h*s));
@@ -1074,6 +1085,7 @@ async function uploadPart(p){ // ανεβάζει φωτό/PDF στο Drive (α�
   if(!p._file) return p;
   if(!CLOUD.url){ return p; } // τοπικά — μένει preview
   try{
+    try{p._file.name=recFilename((M&&M.d)||p.d,(M&&(M.vendor||M.t))||'απόδειξη','',p.a||(M&&M.exp)||0,extOf(p._file.type,p._file.name));}catch(e){}
     const r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"uploadReceipt",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,file:p._file})});
     const s=await r.json();
     if(s&&s.url){ p.url=s.url; p.fname=p._file.name; delete p._file; }
