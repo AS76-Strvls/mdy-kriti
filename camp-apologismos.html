@@ -85,7 +85,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 .dirty{font-size:12px;font-weight:700;color:var(--amber)}
 .pend .p2{margin-left:auto;border:0;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:7px;padding:5px 9px;font-size:11px;white-space:nowrap;flex:0 0 auto}
 .ov{position:fixed;inset:0;background:rgba(20,30,15,.5);display:none;align-items:flex-end;justify-content:center;z-index:30}
-.cropov{position:fixed;inset:0;background:rgba(10,15,8,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:40;padding:12px}
+.cropov{position:fixed;inset:0;background:rgba(10,15,8,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:90;padding:12px}
 .cropov canvas{touch-action:none;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.55);max-width:100%}
 .cropov .chint{color:#eee;font-size:13px;margin-bottom:9px;text-align:center;max-width:520px;line-height:1.4}
 .cropov .cbtns{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;justify-content:center}
@@ -688,7 +688,9 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 var SUBFILE=null;
 function openSub(){SUBFILE=null;["subWho","subExp","subAmt","subNote"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var rb=document.querySelector('input[name=subpay][value=me]');if(rb)rb.checked=true;var m=document.getElementById("subMsg");if(m)m.textContent="";var t=document.getElementById("subThumb");if(t)t.textContent="";document.getElementById("subOv").style.display="flex";}
 function closeSub(){document.getElementById("subOv").style.display="none";}
-function subPickFile(f){if(!f)return;var r=new FileReader();r.onload=function(){SUBFILE={name:f.name,type:f.type||'',data:r.result};var t=document.getElementById("subThumb");if(t)t.innerHTML=((f.type||'').indexOf('image')>=0?'<img src="'+r.result+'" style="height:60px;border-radius:6px;border:1px solid var(--line)">':'📄 '+esc(f.name));};r.readAsDataURL(f);}
+function subPickFile(f){if(!f)return;var t=document.getElementById("subThumb");
+ if(/^image\//.test(f.type||'')){ openCrop(f,function(out){ if(!out)return; SUBFILE=out; if(t)t.innerHTML='<img src="data:'+(out.type||'image/jpeg')+';base64,'+out.data+'" style="height:60px;border-radius:6px;border:1px solid var(--line)"> <small style="color:var(--spkl)">✂ επεξεργασμένη</small>'; }); return; }
+ var r=new FileReader();r.onload=function(){SUBFILE={name:f.name,type:f.type||'',data:r.result};if(t)t.innerHTML='📄 '+esc(f.name);};r.readAsDataURL(f);}
 async function doSubmitReceipt(){
  var who=(document.getElementById("subWho").value||"").trim();
  var exp=(document.getElementById("subExp").value||"").trim();
@@ -701,7 +703,7 @@ async function doSubmitReceipt(){
  var reimb=(pay==='me');
  if(pay==='other')note=('Πλήρωσε άλλος. '+note).trim();
  if(pay==='unpaid')note=('⚠ ΑΠΛΗΡΩΤΟ — να πληρωθεί ο προμηθευτής. '+note).trim();
- if(!CLOUD.url){subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,url:SUBFILE?SUBFILE.data:'',fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
+ if(!CLOUD.url){var _u=SUBFILE?(/^data:/.test(SUBFILE.data)?SUBFILE.data:('data:'+(SUBFILE.type||'image/jpeg')+';base64,'+SUBFILE.data)):'';subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,url:_u,fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
  msg.textContent="⏳ Υποβολή…";
  try{
   var body=JSON.stringify({action:"submitReceipt",key:CLOUD.key,submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,file:SUBFILE});
