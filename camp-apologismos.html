@@ -1365,8 +1365,24 @@ const r=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.n
 const s=await r.json();
 if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;subs=s.subs||[];if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
 cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
-else{cstat("ℹ️ Κοινό ταμείο άδειο — πάτα «☁ Αποθήκευση» για αρχικοποίηση.");}
+else{notFoundUI();}
 }catch(e){cstat("⚠️ Δεν φόρτωσε — έλεγξε URL/σύνδεση. Δουλεύεις τοπικά.");}
+}
+function notFoundUI(){
+ cstat("🚫 Η δράση «"+esc(CLOUD.key)+"» δεν υπάρχει.");
+ if(document.getElementById("notFoundOv"))return;
+ var base=location.pathname;
+ var d=document.createElement("div");d.id="notFoundOv";
+ d.style.cssText="position:fixed;inset:0;background:rgba(20,30,15,.93);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px";
+ d.innerHTML='<div style="background:#fff;border-radius:16px;max-width:430px;width:100%;padding:26px 24px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.4)">'
+  +'<div style="font-size:46px;margin-bottom:4px">🚫</div>'
+  +'<h2 style="margin:0 0 8px;font-size:21px;color:#37501F">Η δράση δεν υπάρχει</h2>'
+  +'<p style="margin:0 0 4px;color:#444;font-size:14.5px">Δεν βρέθηκε δράση με κωδικό:</p>'
+  +'<p style="margin:0 0 16px;font-weight:800;font-size:16px;word-break:break-all;color:#111">«'+esc(CLOUD.key)+'»</p>'
+  +'<p style="margin:0 0 20px;color:#666;font-size:13px;line-height:1.5">Έλεγξε τον σύνδεσμο ή τον κωδικό. Προσοχή: ο <b>κωδικός δράσης</b> (στο link) είναι διαφορετικός από το <b>PIN</b> επεξεργασίας.</p>'
+  +'<a href="'+base+'" style="display:inline-block;background:#37501F;color:#fff;font-weight:700;text-decoration:none;border-radius:10px;padding:12px 22px;font-size:15px">🏠 Πίσω στην αρχική</a>'
+  +'</div>';
+ document.body.appendChild(d);
 }
 async function cloudSave(){
 if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
