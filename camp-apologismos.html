@@ -378,7 +378,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 </div>
 <div id="home" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:60;overflow:auto;padding:22px 16px">
 <div style="max-width:520px;margin:0 auto">
-<h2 style="color:var(--spkd)">Οικονομικός Απολογισμός Δράσεων</h2>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span class="logo76" id="homeLogo" style="width:48px;height:48px"></span><h2 style="color:var(--spkd);margin:0">Οικονομικός Απολογισμός Δράσεων</h2></div>
 <div class="card"><div style="padding:14px">
 <div style="font-weight:800;color:var(--spkd);margin-bottom:8px">Άνοιξε δράση</div>
 <input id="homeKey" placeholder="key ή link της δράσης" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;box-sizing:border-box">
@@ -1353,7 +1353,7 @@ function updFloat(){var fb=document.getElementById("floatbar");if(!fb)return;if(
 function updLock(){updFloat();var el=document.getElementById("lockRow");if(!el)return;if(SESSION.admin){el.innerHTML='<span style="color:#2f7d32;font-weight:700">🔓 Admin — πλήρη δικαιώματα</span>';}else if(SESSION.pin){el.innerHTML='<span style="color:#2f7d32;font-weight:700">🔓 Edit ξεκλείδωτο</span> <button class="pbuy" style="padding:5px 9px" onclick="lockEdit()">🔒 Κλείδωσε</button>';}else{el.innerHTML='<span style="color:var(--amber);font-weight:700">🔒 Θέα μόνο</span> <button class="pbuy" style="padding:5px 9px" onclick="unlockEdit()">🔓 Ξεκλείδωμα (PIN)</button>';}}
 function unlockEdit(){var p=prompt("🔒 PIN δράσης για αλλαγές:");if(p==null)return;SESSION.pin=p;try{localStorage.setItem('apolog_pin_'+CLOUD.key,p);}catch(e){}updLock();cstat("🔓 PIN αποθηκεύτηκε — επιβεβαιώνεται στην πρώτη «☁ Αποθήκευση».");}
 function lockEdit(){SESSION.pin="";try{localStorage.removeItem('apolog_pin_'+CLOUD.key);}catch(e){}updLock();}
-function showHome(){var el=document.getElementById("home");if(el)el.style.display="block";try{newActionUI();}catch(e){}}
+function showHome(){var el=document.getElementById("home");if(el)el.style.display="block";try{newActionUI();}catch(e){}try{var hl=document.getElementById("homeLogo"),src=document.querySelector(".top .logo76 img");if(hl&&src&&!hl.firstChild)hl.innerHTML='<img alt="76" src="'+src.getAttribute("src")+'">';}catch(e){}}
 function toggleAdmin(){var c=document.getElementById("adminCard");if(c)c.style.display=(c.style.display==="none"?"":"none");}
 function openKey(k){location.search="?a="+encodeURIComponent(k);}
 function homeOpen(){var v=(document.getElementById("homeKey").value||"").trim();if(!v)return;var m=v.match(/[?&]a=([^&]+)/);openKey(m?decodeURIComponent(m[1]):v);}
