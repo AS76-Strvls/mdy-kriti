@@ -148,6 +148,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
   .cash .box .v{font-size:16px}
   .cash .box.big .v{font-size:17px}
   .cash .box .k{font-size:9.5px;letter-spacing:.02em}
+  #cloudCard>div{flex-wrap:wrap}
+  #cloudStatus{flex:1 1 100%;min-width:0;margin-bottom:4px}
+  #cloudCard>div>button{flex:1 1 auto}
 }
 @media print{
  .aptabs,#undoBar,#cloudCard,.ov,.cropov,#ovpend,button,.foot{display:none!important}
@@ -406,7 +409,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <input id="subExp" placeholder="π.χ. Lidl, καύσιμα, σουπερμάρκετ…" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
 <label style="font-size:12px;color:var(--muted)">Ποσό (€)</label>
 <input id="subAmt" type="number" inputmode="decimal" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
-<label style="display:flex;align-items:center;gap:9px;margin:4px 0 10px;font-size:14px;cursor:pointer"><input id="subReimb" type="checkbox" style="width:18px;height:18px"> <span>💶 Αιτούμαι επιστροφή — τα πλήρωσα εγώ</span></label>
+<div style="margin:6px 0 10px">
+<div style="color:var(--muted);font-size:12px;margin-bottom:2px">Πληρωμή:</div>
+<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:14px"><input type="radio" name="subpay" value="me" checked style="width:17px;height:17px"> <span>💶 Το πλήρωσα εγώ — θέλω επιστροφή</span></label>
+<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:14px"><input type="radio" name="subpay" value="other" style="width:17px;height:17px"> <span>👤 Το πλήρωσε άλλος</span></label>
+<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:14px"><input type="radio" name="subpay" value="unpaid" style="width:17px;height:17px"> <span>🧾 Απλήρωτο — να πληρωθεί ο προμηθευτής</span></label>
+</div>
 <label style="font-size:12px;color:var(--muted)">Σημείωση (προαιρ.)</label>
 <input id="subNote" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
 <label style="display:inline-block;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:9px;padding:10px 14px;cursor:pointer">📎 Φώτο / PDF απόδειξης<input id="subFile" type="file" accept="image/*,application/pdf" style="display:none" onchange="subPickFile(this.files[0])"></label>
@@ -678,7 +686,7 @@ function renderWallets(){
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 /* ── Ουρά υποβολών αποδείξεων (submit → approve · αιτήματα επιστροφής) ── */
 var SUBFILE=null;
-function openSub(){SUBFILE=null;["subWho","subExp","subAmt","subNote"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var rb=document.getElementById("subReimb");if(rb)rb.checked=false;var m=document.getElementById("subMsg");if(m)m.textContent="";var t=document.getElementById("subThumb");if(t)t.textContent="";document.getElementById("subOv").style.display="flex";}
+function openSub(){SUBFILE=null;["subWho","subExp","subAmt","subNote"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var rb=document.querySelector('input[name=subpay][value=me]');if(rb)rb.checked=true;var m=document.getElementById("subMsg");if(m)m.textContent="";var t=document.getElementById("subThumb");if(t)t.textContent="";document.getElementById("subOv").style.display="flex";}
 function closeSub(){document.getElementById("subOv").style.display="none";}
 function subPickFile(f){if(!f)return;var r=new FileReader();r.onload=function(){SUBFILE={name:f.name,type:f.type||'',data:r.result};var t=document.getElementById("subThumb");if(t)t.innerHTML=((f.type||'').indexOf('image')>=0?'<img src="'+r.result+'" style="height:60px;border-radius:6px;border:1px solid var(--line)">':'📄 '+esc(f.name));};r.readAsDataURL(f);}
 async function doSubmitReceipt(){
@@ -689,7 +697,10 @@ async function doSubmitReceipt(){
  if(!exp){msg.innerHTML='<span style="color:var(--red)">Βάλε τι αφορά (προμηθευτής/έξοδο).</span>';return;}
  var amt=parseFloat(document.getElementById("subAmt").value)||0;
  var note=(document.getElementById("subNote").value||"").trim();
- var reimb=document.getElementById("subReimb").checked;
+ var pay=((document.querySelector('input[name=subpay]:checked')||{}).value)||'me';
+ var reimb=(pay==='me');
+ if(pay==='other')note=('Πλήρωσε άλλος. '+note).trim();
+ if(pay==='unpaid')note=('⚠ ΑΠΛΗΡΩΤΟ — να πληρωθεί ο προμηθευτής. '+note).trim();
  if(!CLOUD.url){subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,url:SUBFILE?SUBFILE.data:'',fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
  msg.textContent="⏳ Υποβολή…";
  try{
@@ -699,43 +710,54 @@ async function doSubmitReceipt(){
   setTimeout(function(){closeSub();cloudLoad();},1300);
  }catch(e){msg.innerHTML='<span style="color:var(--red)">⚠ Δεν στάλθηκε — έλεγξε σύνδεση.</span>';}
 }
-function subPending(){return subs.filter(function(x){return (x.status||'pending')!=='approved'&&x.status!=='rejected';});}
+var payChoosing=null;
+function subActive(){return subs.filter(function(s){var st=s.status||'pending';return st==='pending'||(st==='approved'&&s.reimburse&&!s.paid);});}
+function subDone(){var a=subActive();return subs.filter(function(s){return a.indexOf(s)<0;});}
+function subPending(){return subs.filter(function(x){return (x.status||'pending')==='pending';});}
 function subOwed(){return subs.filter(function(x){return x.reimburse&&x.status==='approved'&&!x.paid;});}
+function subRow(s){
+ var idx=subs.indexOf(s),st=s.status||'pending',canEd=!!(SESSION.pin||SESSION.admin);
+ var badge=st==='approved'?'<span style="color:#2f7d32">✓ εγκρίθηκε</span>':(st==='rejected'?'<span style="color:var(--red)">✕ απορρίφθηκε</span>':'<span style="color:var(--amber)">⏳ προς έγκριση</span>');
+ var isImg=/^data:image/i.test(s.url||'')&&!/pdf/i.test(s.fname||'');
+ var thumb=s.url?(isImg?'<a href="'+s.url+'" target="_blank"><img src="'+s.url+'" style="height:44px;width:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)"></a>':'<a href="'+s.url+'" target="_blank" title="άνοιξε απόδειξη" style="font-size:22px;text-decoration:none">📎</a>'):'<span title="χωρίς φωτό" style="font-size:18px">📷✗</span>';
+ var reimb=s.reimburse?(' · <b style="color:'+(s.paid?'#2f7d32':'var(--amber)')+'">💶 επιστροφή '+(s.paid?('✓ πληρώθηκε'+(s.paidFrom?' ('+esc(s.paidFrom)+')':'')):'εκκρεμεί')+'</b>'):'';
+ var h='<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">';
+ h+='<div style="flex:0 0 auto">'+thumb+'</div>';
+ h+='<div style="flex:1;min-width:0;font-size:12.5px"><b>'+esc(s.exp||'(έξοδο)')+'</b> '+(s.amount?'<b>'+eur(s.amount)+'</b>':'')+'<div style="color:var(--muted);overflow-wrap:anywhere">από '+esc(s.submitter||'—')+' · '+badge+reimb+(s.note?' · '+esc(s.note):'')+'</div>';
+ if(canEd&&payChoosing===s.id){var ws=wallets.filter(function(w){return w.cash;});if(!ws.length)ws=wallets;
+  h+='<div style="margin-top:5px;font-size:12px;color:var(--spkd)">Από πού πληρώθηκε; '+ws.map(function(w){return '<button class="pbuy" style="padding:4px 9px;margin:3px 4px 0 0" onclick="markPaidFrom('+idx+',\''+w.id+'\')">'+esc(w.name)+'</button>';}).join('')+'<button class="pbuy" style="padding:4px 8px;color:var(--muted)" onclick="cancelPay()">✕</button></div>';}
+ h+='</div>';
+ if(canEd&&payChoosing!==s.id){h+='<div style="flex:0 0 auto;display:flex;flex-direction:column;gap:4px">';
+  if(st==='pending'){h+='<button class="pbuy" style="padding:5px 9px" onclick="approveSub('+idx+')">✓ Έγκριση</button><button class="pbuy" style="padding:5px 9px;color:var(--red)" onclick="rejectSub('+idx+')">✕ Απόρ.</button>';}
+  if(s.reimburse&&st==='approved'&&!s.paid){h+='<button class="pbuy" style="padding:5px 9px" onclick="markPaid('+idx+')">💶 Πληρώθηκε</button>';}
+  if(st==='rejected'){h+='<button class="pbuy" style="padding:5px 9px" onclick="unrejectSub('+idx+')">↺</button>';}
+  h+='</div>';}
+ return h+'</div>';
+}
 function renderSubs(){
  var box=document.getElementById("subQueue");if(!box)return;
  var cnt=document.getElementById("subCount");var p=subPending().length,o=subOwed().length;
  if(cnt)cnt.textContent=(p?('· '+p+' προς έγκριση'):'')+(o?('  · '+o+' προς πληρωμή'):'');
- var canEd=!!(SESSION.pin||SESSION.admin);
  if(!subs.length){box.innerHTML='<div style="color:var(--muted);font-size:12.5px">Καμία υποβολή ακόμη — πάτα «📤 Υπόβαλε απόδειξη».</div>';return;}
- var h='';subs.slice().reverse().forEach(function(s){
-  var idx=subs.indexOf(s);var st=s.status||'pending';
-  var badge=st==='approved'?'<span style="color:#2f7d32">✓ εγκρίθηκε</span>':(st==='rejected'?'<span style="color:var(--red)">✕ απορρίφθηκε</span>':'<span style="color:var(--amber)">⏳ προς έγκριση</span>');
-  var isPdf=/\.pdf/i.test(s.fname||'')||/pdf/i.test(s.url||'');
-  var thumb=s.url?('<a href="'+s.url+'" target="_blank">'+(isPdf?'📄':'<img src="'+s.url+'" style="height:44px;width:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">')+'</a>'):'<span title="χωρίς φωτό">📷✗</span>';
-  var reimb=s.reimburse?(' · <b style="color:'+(s.paid?'#2f7d32':'var(--amber)')+'">💶 επιστροφή '+(s.paid?'✓ πληρώθηκε':'εκκρεμεί')+'</b>'):'';
-  h+='<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">';
-  h+='<div style="flex:0 0 auto">'+thumb+'</div>';
-  h+='<div style="flex:1;min-width:0;font-size:12.5px"><b>'+esc(s.exp||'(έξοδο)')+'</b> '+(s.amount?'<b>'+eur(s.amount)+'</b>':'')+'<div style="color:var(--muted);overflow-wrap:anywhere">από '+esc(s.submitter||'—')+' · '+badge+reimb+(s.note?' · '+esc(s.note):'')+'</div></div>';
-  if(canEd){h+='<div style="flex:0 0 auto;display:flex;flex-direction:column;gap:4px">';
-   if(st==='pending'){h+='<button class="pbuy" style="padding:5px 9px" onclick="approveSub('+idx+')">✓ Έγκριση</button><button class="pbuy" style="padding:5px 9px;color:var(--red)" onclick="rejectSub('+idx+')">✕ Απόρ.</button>';}
-   if(s.reimburse&&st==='approved'&&!s.paid){h+='<button class="pbuy" style="padding:5px 9px" onclick="markPaid('+idx+')">💶 Πληρώθηκε</button>';}
-   if(st==='rejected'){h+='<button class="pbuy" style="padding:5px 9px" onclick="unrejectSub('+idx+')">↺</button>';}
-   h+='</div>';}
-  h+='</div>';});
- box.innerHTML=h;
+ var act=subActive(),dn=subDone();
+ var html=act.length?act.slice().reverse().map(subRow).join(''):'<div style="color:var(--muted);font-size:12.5px">Καμία εκκρεμότητα — όλα ξεκαθαρισμένα ✓</div>';
+ if(dn.length)html+='<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted);font-size:12px">Ξεκαθαρισμένα ('+dn.length+')</summary>'+dn.slice().reverse().map(subRow).join('')+'</details>';
+ box.innerHTML=html;
 }
 function needPin(){if(!(SESSION.pin||SESSION.admin)){unlockEdit();return true;}return false;}
+function catByName(n){for(var k=0;k<cats.length;k++)if(cats[k].n===n)return k;return -1;}
 function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
- var names=cats.map(function(c,k){return k+": "+c.n;}).join("\n");
- var ci=parseInt(prompt("Έγκριση «"+(s.exp||'')+"» "+eur(+s.amount||0)+"\nΣε ποια κατηγορία; δώσε αριθμό:\n"+names,"0"));
- if(isNaN(ci)||!cats[ci])return;
+ var ci=catByName('Άλλο');if(ci<0)ci=cats.length-1;if(ci<0)return;
  var cw=(wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'';
  var e={t:s.exp||'(έξοδο)',a:Math.round((+s.amount||0)*100)/100,vendor:s.exp||'',payer:s.submitter||'',wallet:cw};
+ if(/ΑΠΛΗΡΩΤΟ/.test(s.note||''))e.unpaid=true;   // «να πληρωθεί ο προμηθευτής»
  if(s.url)e.parts=[{a:e.a,note:s.note||'',d:'',url:s.url,fname:s.fname||''}];
- snap();cats[ci].log.push(e);cats[ci].open=true;s.status='approved';s.approvedTs=today();markDirty();render();if(CLOUD.url)cloudSave();else save();}
-function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("Απόρριψη αυτής της υποβολής;"))return;snap();s.status='rejected';markDirty();render();if(CLOUD.url)cloudSave();else save();}
-function unrejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;s.status='pending';markDirty();render();if(CLOUD.url)cloudSave();else save();}
-function markPaid(i){var s=subs[i];if(!s)return;if(needPin())return;snap();s.paid=true;s.paidTs=today();markDirty();render();if(CLOUD.url)cloudSave();else save();}
+ snap();cats[ci].log.push(e);cats[ci].open=true;s.status='approved';s.approvedTs=today();markDirty();render();}
+function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("Απόρριψη αυτής της υποβολής;"))return;snap();s.status='rejected';markDirty();render();}
+function unrejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;s.status='pending';markDirty();render();}
+function markPaid(i){var s=subs[i];if(!s)return;if(needPin())return;payChoosing=s.id;render();}
+function markPaidFrom(i,wid){var s=subs[i];if(!s)return;if(needPin())return;snap();s.paid=true;s.paidTs=today();s.paidFrom=walletName(wid);payChoosing=null;markDirty();render();}
+function cancelPay(){payChoosing=null;render();}
 function incTotal(){return Math.round(income.reduce(function(s,x){return s+(+x.a||0);},0)*100)/100;}
 function incBudTotal(){return Math.round(Object.keys(INCBUD).reduce(function(s,k){return s+(+INCBUD[k]||0);},0)*100)/100;}
 function budExpTotal(){return Math.round(Object.keys(CATBUD).reduce(function(s,k){return s+(+CATBUD[k]||0);},0)*100)/100;}
