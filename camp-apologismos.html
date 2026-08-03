@@ -414,6 +414,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <input id="subExp" placeholder="π.χ. Lidl, καύσιμα, σουπερμάρκετ…" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
 <label style="font-size:12px;color:var(--muted)">Ποσό (€)</label>
 <input id="subAmt" type="number" inputmode="decimal" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
+<label style="font-size:12px;color:var(--muted)">Ημερομηνία απόδειξης</label>
+<input id="subDate" type="date" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
 <div style="margin:6px 0 10px">
 <div style="color:var(--muted);font-size:12px;margin-bottom:2px">Πληρωμή:</div>
 <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:14px"><input type="radio" name="subpay" value="me" checked style="width:17px;height:17px"> <span>💶 Το πλήρωσα εγώ — θέλω επιστροφή</span></label>
@@ -564,8 +566,22 @@ function receiptsOf(e){ // πλήθος αποδείξεων-γραμμών + α
   const nph=parts.reduce((s,p)=>s+pphotos(p).filter(x=>x.url||x._file).length,0);
   return {n:parts.length, files, nph};
 }
+/* Emoji ανά κατηγορία (auto από το όνομα) — για να ξεχωρίζει εύκολα η κατηγορία στο έξοδο */
+function catEmoji(name){var n=(name||'').toLowerCase();
+ if(/διατροφ|φαγητ|τρόφιμ|τροφοδοσ|σουπερ|super|market|κρέας|αρτοπ|φρού|λαχαν/.test(n))return '🍽';
+ if(/διαμον|σκην|camp|κατασκ|χώρο|ενοίκ/.test(n))return '🏕';
+ if(/μεταφορ|λεωφορ|καύσιμ|βενζ|petrol|πετρ|eko|διόδ|hilux|όχημα|αυτοκ|βαν/.test(n))return '🚌';
+ if(/υλικ|πρόγραμμ|program|κατασκευ|χειροτ|διακ/.test(n))return '🎨';
+ if(/επισκευ|εργαλ|βλάβ|service|σέρβις/.test(n))return '🔧';
+ if(/φαρμακ|βοήθει|υγεί|ιατρ|πρώτ/.test(n))return '🩹';
+ if(/αναμνηστ|δώρ|βραβ|έπαθλ/.test(n))return '🎁';
+ if(/καθαρ|χαρτ|απορ/.test(n))return '🧼';
+ if(/νερ|ποτ|αναψυκ/.test(n))return '💧';
+ if(/έκτακτ|άλλο|λοιπ|διάφορ|μικρο/.test(n))return '📦';
+ return '🏷';
+}
 /* Γραμμή εξόδου (κοινή σε προβολή κατηγορίας & ημερομηνίας). showCat=δείξε κατηγορία. */
-function entryRowHtml(e,ci,li,showCat){
+function entryRowHtml(e,ci,li,showCat,opt){
   const v=(e.exp!=null&&+e.exp!==+e.a)?(+e.a-+e.exp):null;
   const vtxt=v!=null?` <small style="color:${v>0?'var(--red)':'var(--ok)'}">(εκτ. ${eur(+e.exp)}, ${v>0?'+':''}${eur(v)})</small>`:'';
   const r=receiptsOf(e);
@@ -574,21 +590,35 @@ function entryRowHtml(e,ci,li,showCat){
   const miss=(!r.files&&(+e.a||0)>0)?` <small style="color:var(--amber)" title="λείπει φωτό απόδειξης">📷✗</small>`:'';
   const noTag=`<b style="color:var(--spkl)">#${e.__no}</b> `;
   const wch=e.wallet?` <small style="color:var(--muted)" title="${walletName(e.wallet)}">${((wallets.find(w=>w.id===e.wallet)||{}).cash?'💵':'🏦')}</small>`:'';
+  const em=cats[ci]?catEmoji(cats[ci].n)+' ':'';
   const catl=showCat&&cats[ci]?` <small style="color:var(--muted)">${cats[ci].n}</small>`:'';
   const ttl=e.vendor?('🏪 '+e.vendor+(e.t?' · '+e.t:'')):(e.t||(e._plans&&e._plans.length?e._plans.map(function(p){return p.label;}).join(', '):'(έξοδο)'));
   const upd=e.unpaid?` <small style="color:var(--amber);font-weight:700">⏳ εκκρεμεί</small>`:'';
   const fnd=e.fund?` <small style="color:var(--muted)">(${e.fund})</small>`:'';
-  return `<div onclick="openEdit(${ci},${li})" style="cursor:pointer"><span>${noTag}${ttl}${catl}${upd}${fnd}${vtxt}${multi}${clip}${miss}${wch} <span style="color:var(--spkl);font-size:11px">✎</span></span><span>${eur(+e.a||0)}</span></div>`;
+  const _amt=(opt&&opt.amt!=null)?opt.amt:(+e.a||0);
+  const _tag=(opt&&opt.tag)?` <small style="color:var(--spkl)">${opt.tag}</small>`:'';
+  return `<div onclick="openEdit(${ci},${li})" style="cursor:pointer"><span>${noTag}${em}${ttl}${_tag}${catl}${upd}${fnd}${vtxt}${multi}${clip}${miss}${wch} <span style="color:var(--spkl);font-size:11px">✎</span></span><span>${eur(_amt)}</span></div>`;
 }
 function renderExpByDate(box){
-  var arr=[]; cats.forEach(function(c,ci){c.log.forEach(function(e,li){arr.push({e:e,ci:ci,li:li,iso:isoOf(e)||'9999-99-99'});});});
+  var arr=[];
+  cats.forEach(function(c,ci){c.log.forEach(function(e,li){
+    var parts=(e.parts&&e.parts.length)?e.parts:[];
+    var dated=parts.filter(function(p){return p.d;});
+    if(dated.length){                                        /* έξοδο με αποδείξεις σε συγκεκριμένες ημ/νίες → κάτω από κάθε μία */
+      dated.forEach(function(p){arr.push({e:e,ci:ci,li:li,iso:p.d,opt:{amt:(+p.a||0),tag:(dated.length>1?('· '+(p.note||'μερική απόδ.')):null)}});});
+      var undA=parts.filter(function(p){return !p.d;}).reduce(function(s,p){return s+(+p.a||0);},0);
+      if(undA>0)arr.push({e:e,ci:ci,li:li,iso:isoOf(e)||'9999-99-99',opt:{amt:undA,tag:'· υπόλοιπο'}});
+    } else {
+      arr.push({e:e,ci:ci,li:li,iso:isoOf(e)||'9999-99-99',opt:null});
+    }
+  });});
   arr.sort(function(a,b){return a.iso<b.iso?-1:(a.iso>b.iso?1:((a.e.__no||0)-(b.e.__no||0)));});
   var d=document.createElement("div");d.className="cat open";
   var h='<div class="log">',cur=null;
   arr.forEach(function(o){
     var day=(o.iso==='9999-99-99')?'— χωρίς ημ/νία —':ddmm(o.iso);
     if(day!==cur){cur=day;h+='<div style="padding:9px 14px 3px;font-weight:800;color:var(--spkd);border-top:1px solid var(--line)">'+day+'</div>';}
-    h+=entryRowHtml(o.e,o.ci,o.li,true);
+    h+=entryRowHtml(o.e,o.ci,o.li,true,o.opt);
   });
   h+='</div>'; d.innerHTML=h; box.appendChild(d);
 }
@@ -685,7 +715,7 @@ const d=document.createElement("div");d.className="cat"+(c.open?" open":"");
 const perc=A.paidia?` · <span style="color:var(--muted)">${eur(sp/A.paidia)}/παιδί</span>`:'';
 const budline=bud?`<small>${eur(sp)} / προϋπ. ${eur(bud)} · <b style="color:${over?'var(--red)':'var(--ok)'}">${over?'+'+eur(sp-bud)+' πάνω':eur(bud-sp)+' μένει'}</b>${perc}</small>`:(A.paidia?`<small>${eur(sp/A.paidia)}/παιδί</small>`:'');
 d.innerHTML=`<div class="hd" onclick="toggle(${i})">
-<div class="nm"><span class="catmv"><button onclick="event.stopPropagation();moveCat(${i},-1)" title="πάνω">↑</button><button onclick="event.stopPropagation();moveCat(${i},1)" title="κάτω">↓</button></span>${c.n} <span class="tap">${c.open?'▲':'▾'}</span>${budline}</div>
+<div class="nm"><span class="catmv"><button onclick="event.stopPropagation();moveCat(${i},-1)" title="πάνω">↑</button><button onclick="event.stopPropagation();moveCat(${i},1)" title="κάτω">↓</button></span>${catEmoji(c.n)} ${c.n} <span class="tap">${c.open?'▲':'▾'}</span>${budline}</div>
 <div class="amt"><div class="sp" style="${over?'color:var(--red)':''}">${eur(sp)}</div></div></div>
 <div class="add">
 <input class="note" id="nt${i}" placeholder="τι / πού">
@@ -743,7 +773,7 @@ function renderWallets(){
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 /* ── Ουρά υποβολών αποδείξεων (submit → approve · αιτήματα επιστροφής) ── */
 var SUBFILE=null;
-function openSub(){SUBFILE=null;["subWho","subExp","subAmt","subNote"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var rb=document.querySelector('input[name=subpay][value=me]');if(rb)rb.checked=true;var m=document.getElementById("subMsg");if(m)m.textContent="";var t=document.getElementById("subThumb");if(t)t.textContent="";document.getElementById("subOv").style.display="flex";}
+function openSub(){SUBFILE=null;["subWho","subExp","subAmt","subNote"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});var dd=document.getElementById("subDate");if(dd)dd.value=today();var rb=document.querySelector('input[name=subpay][value=me]');if(rb)rb.checked=true;var m=document.getElementById("subMsg");if(m)m.textContent="";var t=document.getElementById("subThumb");if(t)t.textContent="";document.getElementById("subOv").style.display="flex";}
 function closeSub(){document.getElementById("subOv").style.display="none";}
 function subPickFile(f){if(!f)return;var t=document.getElementById("subThumb");
  if(/^image\//.test(f.type||'')){ openCrop(f,function(out){ if(!out)return; SUBFILE=out; if(t)t.innerHTML='<img src="data:'+(out.type||'image/jpeg')+';base64,'+out.data+'" style="height:60px;border-radius:6px;border:1px solid var(--line)"> <small style="color:var(--spkl)">✂ επεξεργασμένη</small>'; }); return; }
@@ -755,16 +785,17 @@ async function doSubmitReceipt(){
  if(!who){msg.innerHTML='<span style="color:var(--red)">Βάλε το όνομά σου.</span>';return;}
  if(!exp){msg.innerHTML='<span style="color:var(--red)">Βάλε τι αφορά (προμηθευτής/έξοδο).</span>';return;}
  var amt=parseFloat(document.getElementById("subAmt").value)||0;
+ var sd=(document.getElementById("subDate")&&document.getElementById("subDate").value)||today();
  var note=(document.getElementById("subNote").value||"").trim();
  var pay=((document.querySelector('input[name=subpay]:checked')||{}).value)||'me';
  var reimb=(pay==='me');
  if(pay==='other')note=('Πλήρωσε άλλος. '+note).trim();
  if(pay==='unpaid')note=('⚠ ΑΠΛΗΡΩΤΟ — να πληρωθεί ο προμηθευτής. '+note).trim();
- if(SUBFILE){try{SUBFILE.name=recFilename(today(),exp,who,amt,extOf(SUBFILE.type,SUBFILE.name));}catch(e){}}
- if(!CLOUD.url){var _u=SUBFILE?(/^data:/.test(SUBFILE.data)?SUBFILE.data:('data:'+(SUBFILE.type||'image/jpeg')+';base64,'+SUBFILE.data)):'';subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,url:_u,fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
+ if(SUBFILE){try{SUBFILE.name=recFilename(sd,exp,who,amt,extOf(SUBFILE.type,SUBFILE.name));}catch(e){}}
+ if(!CLOUD.url){var _u=SUBFILE?(/^data:/.test(SUBFILE.data)?SUBFILE.data:('data:'+(SUBFILE.type||'image/jpeg')+';base64,'+SUBFILE.data)):'';subs.push({id:'sub'+Date.now(),submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,d:sd,url:_u,fname:SUBFILE?SUBFILE.name:'',ts:new Date().toLocaleString('el-GR'),status:'pending',paid:false});save();closeSub();render();return;}
  msg.textContent="⏳ Υποβολή…";
  try{
-  var body=JSON.stringify({action:"submitReceipt",key:CLOUD.key,submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,file:SUBFILE});
+  var body=JSON.stringify({action:"submitReceipt",key:CLOUD.key,submitter:who,exp:exp,amount:amt,note:note,reimburse:reimb,d:sd,file:SUBFILE});
   await fetch(CLOUD.url,{method:"POST",body});
   msg.innerHTML='<span style="color:#2f7d32;font-weight:700">✅ Υποβλήθηκε — προς έγκριση. Ευχαριστούμε!</span>';
   setTimeout(function(){closeSub();cloudLoad();},1300);
@@ -809,9 +840,9 @@ function catByName(n){for(var k=0;k<cats.length;k++)if(cats[k].n===n)return k;re
 function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
  var ci=catByName('Άλλο');if(ci<0)ci=cats.length-1;if(ci<0)return;
  var cw=(wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'';
- var e={t:s.exp||'(έξοδο)',a:Math.round((+s.amount||0)*100)/100,vendor:s.exp||'',payer:s.submitter||'',wallet:cw};
+ var e={t:s.exp||'(έξοδο)',a:Math.round((+s.amount||0)*100)/100,vendor:s.exp||'',payer:s.submitter||'',wallet:cw,d:(s.d||today())};
  if(/ΑΠΛΗΡΩΤΟ/.test(s.note||''))e.unpaid=true;   // «να πληρωθεί ο προμηθευτής»
- if(s.url)e.parts=[{a:e.a,note:s.note||'',d:'',url:s.url,fname:s.fname||''}];
+ if(s.url)e.parts=[{a:e.a,note:s.note||'',d:(s.d||''),ph:[{url:s.url,fname:s.fname||''}]}];
  snap();cats[ci].log.push(e);cats[ci].open=true;s.status='approved';s.approvedTs=today();markDirty();render();}
 function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("Απόρριψη αυτής της υποβολής;"))return;snap();s.status='rejected';markDirty();render();}
 function unrejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;s.status='pending';markDirty();render();}
@@ -994,7 +1025,7 @@ document.getElementById("mDel").style.display="";
 document.getElementById("mRestore").style.display=(e._plan||e._plans)?"":"none";
 fillModal();openModal();}
 function fillModal(){document.getElementById("mT").value=M.t;document.getElementById("mVendor").value=M.vendor;
-document.getElementById("mExp").value=M.exp;document.getElementById("mDate").value=M.d||"";
+document.getElementById("mExp").value=M.exp;document.getElementById("mDate").value=M.d||today();
 var ws=document.getElementById("mWallet");
 ws.innerHTML='<option value="__pending">⏳ Εκκρεμεί — δεν πληρώθηκε ακόμα</option><option value="">✔ Πληρώθηκε — κοινό ταμείο</option>'+wallets.map(function(w){return '<option value="'+w.id+'">✔ '+(w.cash?'💵 ':'🏦 ')+w.name+'</option>';}).join('');
 ws.value=M.unpaid?"__pending":(M.wallet||"");
@@ -1191,6 +1222,8 @@ if(_sb){_sb.textContent="Αποθήκευση";_sb.disabled=false;}
 const parts=M.parts.map(p=>({a:parseFloat(p.a)||0,note:(p.note||'').trim(),d:p.d||'',ph:pphotos(p).filter(x=>x.url||x._file).map(x=>({url:x.url||'',fname:x.fname||'',_file:x._file||null}))}))
   .filter(p=>p.a||p.note||p.ph.length||p.d);
 const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
+var _pd=parts.map(function(p){return p.d;}).filter(Boolean).sort();
+if(_pd.length)M.d=_pd[0];   /* αν οι αποδείξεις έχουν ημ/νία → γίνεται η ημ/νία του εξόδου (η νωρίτερη) */
 let t=M.t||"έξοδο"; if(total===0&&!/δωρε/i.test(t)) t+=" — δωρεάν";
 const entry={t,a:total};
 if(M.d)entry.d=M.d;
@@ -1295,7 +1328,7 @@ function renderReport(){
       +(r.unpaid?' <button class="pbuy" style="padding:3px 7px" onclick="repPay('+r.ci+','+r.li+')" title="σήμανση ως πληρωμένο (+ πηγή)">✔</button>':'');
    }
   }
-  h+='<tr><td class="n" style="color:var(--spkl);font-weight:700">'+(r.no||'')+'</td><td>'+ddmm(r.iso)+'</td><td>'+r.t+'</td><td>'+r.cat+'</td><td>'+(r.vendor||'')+'</td><td>'+w+'</td><td>'+rec+'</td><td class="n">'+eur(r.a)+'</td>'+(canEd?('<td>'+act+'</td>'):'')+'</tr>';});
+  h+='<tr><td class="n" style="color:var(--spkl);font-weight:700">'+(r.no||'')+'</td><td>'+ddmm(r.iso)+'</td><td>'+r.t+'</td><td>'+catEmoji(r.cat)+' '+r.cat+'</td><td>'+(r.vendor||'')+'</td><td>'+w+'</td><td>'+rec+'</td><td class="n">'+eur(r.a)+'</td>'+(canEd?('<td>'+act+'</td>'):'')+'</tr>';});
  h+='<tr class="tot"><td colspan="7">ΣΥΝΟΛΟ ('+rows.length+' εγγρ.)</td><td class="n">'+eur(grand)+'</td>'+(canEd?'<td></td>':'')+'</tr>'+(spentSystem()?'<tr><td colspan="7" style="color:var(--muted)">εκ των οποίων 🏦 Σύστημα (προπληρωμές) / 💵 μετρητά</td><td class="n" style="color:var(--muted)">'+eur(spentSystem())+' / '+eur(tot().spent)+'</td>'+(canEd?'<td></td>':'')+'</tr>':'')+'</table>';
  h+='<h4>Σύνολα ανά κατηγορία (πραγματικό vs προϋπ.)</h4><table><tr><th>Κατηγορία</th><th class="n">Πραγματικό</th><th class="n">Προϋπ.</th><th class="n">Δ</th><th class="n">/παιδί</th></tr>';
  Object.keys(byCat).forEach(function(k){var bud=CATBUD[k]||0,dv=bud?byCat[k]-bud:0;
@@ -1504,6 +1537,13 @@ function lockEdit(){SESSION.pin="";try{localStorage.removeItem('apolog_pin_'+CLO
 function showHome(){var el=document.getElementById("home");if(el)el.style.display="block";try{newActionUI();}catch(e){}try{var hl=document.getElementById("homeLogo"),src=document.querySelector(".top .logo76 img");if(hl&&src&&!hl.firstChild)hl.innerHTML='<img alt="76" src="'+src.getAttribute("src")+'">';}catch(e){}}
 function toggleAdmin(){var c=document.getElementById("adminCard");if(c)c.style.display=(c.style.display==="none"?"":"none");}
 function openKey(k){location.search="?a="+encodeURIComponent(k);}
+function openWithPin(k,pin){try{if(pin)localStorage.setItem('apolog_pin_'+k,pin);}catch(e){}openKey(k);} /* άνοιξε + ξεκλείδωσε (ήξερε το PIN) */
+document.addEventListener('keydown',function(ev){ if(ev.key!=='Escape')return;  /* ESC κλείνει το πάνω-πάνω popup */
+ var cr=document.getElementById('cropov'); if(cr&&cr.style.display&&cr.style.display!=='none'){if(typeof cancelCrop==='function')cancelCrop();return;}
+ var so=document.getElementById('subOv'); if(so&&so.style.display&&so.style.display!=='none'){if(typeof closeSub==='function')closeSub();return;}
+ var op=document.getElementById('ovpend'); if(op&&op.style.display&&op.style.display!=='none'){if(typeof closePendEdit==='function')closePendEdit();return;}
+ var ov=document.getElementById('ov'); if(ov&&ov.classList.contains('on')){if(typeof closeModal==='function')closeModal();return;}
+});
 function hmsg(html){var b=document.getElementById("homeMsg");if(b)b.innerHTML=html;}
 async function resolveVal(v){                                /* text()+parse + retry (Apps Script cold-start γυρνά HTML) */
  for(var i=0;i<3;i++){
@@ -1525,12 +1565,13 @@ async function homeOpen(){
  hmsg("<span style='color:var(--muted)'>⏳ Αναζήτηση…</span>");
  var s=await resolveVal(v);
  if(!s){hmsg("<span style='color:var(--red)'>⚠ Δεν απάντησε ο διακομιστής — δοκίμασε ξανά σε λίγο.</span>");return;}
- if(s.asKey){openKey(v);return;}                             /* ταιριάζει κωδικός δράσης */
+ if(s.asKey){openKey(v);return;}                             /* ταιριάζει κωδικός δράσης → θέα */
  var bp=s.byPin||[];
- if(bp.length===1){openKey(bp[0].key);return;}              /* ένα PIN → μία δράση */
+ var pinEsc=v.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+ if(bp.length===1){openWithPin(bp[0].key,v);return;}        /* ένα PIN → μία δράση, ξεκλειδωμένη */
  if(bp.length>1){                                            /* ίδιο PIN σε πολλές → επιλογή */
   var h="<div style='font-weight:700;color:var(--spkd);margin-bottom:6px'>Αυτό το PIN ταιριάζει σε "+bp.length+" δράσεις — διάλεξε:</div>";
-  bp.forEach(function(x){h+="<button class='add-cat' style='width:100%;text-align:left;margin-top:6px;padding:9px 12px' onclick=\"openKey('"+esc(x.key).replace(/'/g,"\\'")+"')\">"+esc(x.title||x.key)+" <span style='color:var(--muted);font-weight:400'>("+esc(x.key)+")</span></button>";});
+  bp.forEach(function(x){h+="<button class='add-cat' style='width:100%;text-align:left;margin-top:6px;padding:9px 12px' onclick=\"openWithPin('"+esc(x.key).replace(/'/g,"\\'")+"','"+pinEsc+"')\">"+esc(x.title||x.key)+" <span style='color:var(--muted);font-weight:400'>("+esc(x.key)+")</span></button>";});
   hmsg(h);return;
  }
  hmsg("<span style='color:var(--red)'>🚫 Δεν βρέθηκε δράση με αυτόν τον κωδικό ή PIN.</span>");
