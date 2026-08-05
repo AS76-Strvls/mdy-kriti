@@ -1489,14 +1489,17 @@ async function cloudLoad(){
 if(!CLOUD.url){return;}
 if(dirty&&!confirm("Έχεις αλλαγές που ΔΕΝ αποθηκεύτηκαν στο κοινό ταμείο. Η φόρτωση θα τις αντικαταστήσει. Συνέχεια;"))return;
 cstat("⏳ Φόρτωση από το κοινό ταμείο…");
-try{
-const r=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now());
-const s=await r.json();
+var s=null;
+for(var i=0;i<4;i++){
+ try{var t=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now()+Math.random()).then(function(r){return r.text();});s=JSON.parse(t);break;}
+ catch(e){s=null;await new Promise(function(x){setTimeout(x,700);});}
+}
+if(s===null){cstat("⚠️ Δεν φόρτωσε — ασταθής σύνδεση. Πάτα ↻ Φόρτωση ξανά.");return;}
 if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;subs=s.subs||[];if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
 cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
 else{notFoundUI();}
-}catch(e){cstat("⚠️ Δεν φόρτωσε — έλεγξε URL/σύνδεση. Δουλεύεις τοπικά.");}
 }
+
 function notFoundUI(){
  cstat("🚫 Η δράση «"+esc(CLOUD.key)+"» δεν υπάρχει.");
  if(document.getElementById("notFoundOv"))return;
@@ -1517,15 +1520,28 @@ async function cloudSave(){
 if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
 if(!CLOUD.key){alert("Δεν έχει οριστεί δράση.");return;}
 cstat("⏳ Αποθήκευση στο κοινό ταμείο…");
-async function doSave(){const body=JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut()}});const r=await fetch(CLOUD.url,{method:"POST",body});return await r.json();}
-try{
-let s=await doSave();
-if(s&&s.error==="pin-required"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){cstat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();s=await doSave();}
-if(s&&s.ok){clearDirty();cstat("✅ Αποθηκεύτηκε <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
-else if(s&&s.error==="pin-required"){cstat("🔒 Λάθος PIN — δεν αποθηκεύτηκε.");}
-else{cstat("⚠️ Δεν αποθηκεύτηκε: "+((s&&s.error)||"άγνωστο"));}
-}catch(e){cstat("⚠️ Δεν αποθηκεύτηκε — έλεγξε URL/σύνδεση.");}
+var _nonce='sv'+Date.now()+Math.floor(Math.random()*1e4);
+function _payload(){return JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut(),_sv:_nonce}});}
+async function _verify(){try{var t=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now()+Math.random()).then(function(r){return r.text();});var c=JSON.parse(t);return !!(c&&c._sv===_nonce);}catch(e){return false;}}
+async function doSave(){
+ try{
+  var r=await fetch(CLOUD.url,{method:"POST",body:_payload()});
+  var s=JSON.parse(await r.text());
+  if(s&&s.error==="pin-required")return 'pin';
+  if(s&&s.ok&&!s.ping){ return (await _verify())?'ok':'retry'; }
+ }catch(e){}
+ return 'retry';
 }
+try{
+let res=await doSave();
+if(res==="pin"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){cstat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();res=await doSave();}
+var _t=0;while(res==="retry"&&_t<3){_t++;cstat("⏳ Αποθήκευση… (προσπάθεια "+(_t+1)+")");await new Promise(function(x){setTimeout(x,800);});res=await doSave();}
+if(res==="ok"){clearDirty();cstat("✅ Αποθηκεύτηκε <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
+else if(res==="pin"){cstat("🔒 Λάθος PIN — δεν αποθηκεύτηκε.");}
+else{cstat("⚠️ <b>ΔΕΝ επιβεβαιώθηκε η αποθήκευση</b> — ασταθής διακομιστής. Οι αλλαγές ΔΕΝ σώθηκαν — πάτα «☁ Αποθήκευση» ξανά.");}
+}catch(e){cstat("⚠️ Δεν αποθηκεύτηκε — έλεγξε σύνδεση.");}
+}
+
 function updFloat(){var fb=document.getElementById("floatbar");if(!fb)return;if(!CLOUD.url||!CLOUD.key){fb.style.display="none";return;}fb.style.display="flex";var el=document.getElementById("floatLock");
  if(SESSION.admin)el.innerHTML='🔓 Admin · '+(dirty?'<b style="color:var(--amber)">μη αποθηκευμένες αλλαγές</b>':'όλα αποθηκευμένα');
  else if(SESSION.pin)el.innerHTML='🔓 Edit · '+(dirty?'<b style="color:var(--amber)">μη αποθηκευμένες</b>':'αποθηκευμένα');
