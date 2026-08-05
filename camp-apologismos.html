@@ -369,11 +369,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 </div>
 </div>
 <div class="cropov" id="cropov">
-<div class="chint">✂️ Σύρε τις 4 γωνίες πάνω στην απόδειξη — θα ισιωθεί σαν σκαναρισμένη. Ή «Χωρίς crop».</div>
+<div class="chint">✂️ Σύρε τις 4 γωνίες πάνω στην απόδειξη — θα ισιωθεί σαν σκαναρισμένη. Ή «Πρωτότυπο» για τη φωτό όπως-είναι (μέγιστη ποιότητα).</div>
 <canvas id="cropCanvas"></canvas>
 <div class="cbtns">
 <button class="cb-apply" onclick="applyCrop()">✓ Εφαρμογή crop</button>
-<button class="cb-skip" onclick="skipCrop()">Χωρίς crop</button>
+<button class="cb-skip" onclick="skipCrop()">📷 Πρωτότυπο</button>
 <button class="cb-cancel" onclick="cancelCrop()">Άκυρο</button>
 </div>
 </div>
@@ -1017,7 +1017,7 @@ document.getElementById("mDel").style.display="none";
 document.getElementById("mRestore").style.display="none";
 fillModal();openModal();}
 function openEdit(ci,li){const e=cats[ci].log[li];
-const parts=(e.parts&&e.parts.length)?e.parts.map(p=>({a:p.a,note:p.note||'',d:p.d||'',ph:(Array.isArray(p.ph)?p.ph.map(x=>({url:x.url||'',fname:x.fname||''})):(p.url?[{url:p.url,fname:p.fname||''}]:[]))})):[{a:(+e.a||0),note:'',d:'',ph:[]}];
+const parts=(e.parts&&e.parts.length)?e.parts.map(p=>({a:p.a,note:p.note||'',d:p.d||'',ph:(Array.isArray(p.ph)?p.ph.filter(x=>x.url).map(x=>({url:x.url,fname:x.fname||''})):(p.url?[{url:p.url,fname:p.fname||''}]:[]))})):[{a:(+e.a||0),note:'',d:'',ph:[]}];
 M={mode:'edit',ci,li,d:isoOf(e),t:e.t||'',vendor:e.vendor||'',exp:(e.exp!=null?e.exp:''),wallet:e.wallet||'',unpaid:e.unpaid||false,fund:e.fund||'',parts,_plan:e._plan||null,_plans:e._plans||null,_alloc:(e._alloc||[]).map(function(a){return {pid:a.pid,a:a.a,manual:true};})};
 buildCatSelect(ci);
 document.getElementById("mTitle").textContent="Επεξεργασία εξόδου";
@@ -1121,8 +1121,11 @@ function applyCrop(){if(!CROP)return;var pts=CROP.pts,D=function(a,bb){return Ma
     if(sx>=0&&sy>=0&&sx<sw-1&&sy<sh-1){var x0=sx|0,y0=sy|0,fx=sx-x0,fy=sy-y0,i00=(y0*sw+x0)*4,i10=i00+4,i01=i00+sw*4,i11=i01+4;
       for(var ch=0;ch<3;ch++)o[oi+ch]=sdata[i00+ch]*(1-fx)*(1-fy)+sdata[i10+ch]*fx*(1-fy)+sdata[i01+ch]*(1-fx)*fy+sdata[i11+ch]*fx*fy;o[oi+3]=255;}
     else{o[oi]=255;o[oi+1]=255;o[oi+2]=255;o[oi+3]=255;}}}
-  octx.putImageData(od,0,0);enhanceCtx(octx,W,H);var out=canvasToFile(oc,CROP.file),cb=CROP.cb;closeCropUI();cb(out);}
-function skipCrop(){if(!CROP)return;var file=CROP.file,cb=CROP.cb;closeCropUI();processReceiptImage(file,cb);}
+  octx.putImageData(od,0,0);var out=canvasToFile(oc,CROP.file),cb=CROP.cb;closeCropUI();cb(out);}
+function skipCrop(){if(!CROP)return;var file=CROP.file,cb=CROP.cb;closeCropUI();
+  if(file&&/^image\//.test(file.type||'')){var rd=new FileReader();rd.onload=function(){cb({name:(file.name||'apodeixi'),type:file.type||'image/jpeg',data:String(rd.result).replace(/^data:[^,]*,/,'')});};rd.onerror=function(){processReceiptImage(file,cb);};rd.readAsDataURL(file);}
+  else processReceiptImage(file,cb);
+}
 function cancelCrop(){if(!CROP)return;var cb=CROP.cb;closeCropUI();cb(null);}
 function closeCropUI(){document.getElementById("cropov").style.display="none";CROP=null;}
 // Βελτίωση απόδειξης: σωστός προσανατολισμός (EXIF) → σμίκρυνση (max 1600px) → ελαφρύ enhance αντίθεσης → JPEG συμπίεση
@@ -1178,14 +1181,19 @@ function toggleModalProv(pid){M._alloc=M._alloc||[];var k=-1;for(var q=0;q<M._al
  M.exp=M._alloc.reduce(function(s,a){return s+provEst(a.pid);},0)||'';var me=document.getElementById("mExp");if(me)me.value=M.exp;
  if(!document.getElementById("mVendor").value&&!document.getElementById("mT").value&&M._alloc.length){document.getElementById("mT").value=M._alloc.map(function(a){var p=provItem(a.pid);return p?p.label:'';}).filter(Boolean).join(", ");}
  updTotal();}
-async function uploadPhoto(x,name){ // ανεβάζει ένα φωτό/PDF (x._file) στο Drive, γυρίζει url
+async function uploadPhoto(x,name){ // ανεβάζει ένα φωτό/PDF (x._file) στο Drive, γυρίζει url — με retry (ασταθές backend)
   if(!x||!x._file) return x;
   if(!CLOUD.url){ return x; } // τοπικά — μένει preview
-  try{ if(name)x._file.name=name;
-    const r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"uploadReceipt",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,file:x._file})});
-    const s=await r.json();
-    if(s&&s.url){ x.url=s.url; x.fname=x._file.name; delete x._file; }
-  }catch(e){}
+  if(name)x._file.name=name;
+  for(var i=0;i<3;i++){
+    try{
+      var r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"uploadReceipt",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,file:x._file})});
+      var s=JSON.parse(await r.text());
+      if(s&&s.url){ x.url=s.url; x.fname=x._file.name; delete x._file; delete x._failed; return x; }
+    }catch(e){}
+    await new Promise(function(res){setTimeout(res,800);});
+  }
+  x._failed=true;   // δεν ανέβηκε — κρατάμε το _file για να μη χαθεί / να ξαναδοκιμάσει
   return x;
 }
 async function saveModal(){
@@ -1220,7 +1228,9 @@ for(const p of M.parts){
   }
 }
 if(_sb){_sb.textContent="Αποθήκευση";_sb.disabled=false;}
-const parts=M.parts.map(p=>({a:parseFloat(p.a)||0,note:(p.note||'').trim(),d:p.d||'',ph:pphotos(p).filter(x=>x.url||x._file).map(x=>({url:x.url||'',fname:x.fname||'',_file:x._file||null}))}))
+var _failedPh=0;M.parts.forEach(function(p){pphotos(p).forEach(function(x){if(!x.url&&x._file)_failedPh++;});});
+if(_failedPh)alert("⚠ "+_failedPh+" φωτό δεν ανέβηκε (ασταθής σύνδεση). Ξαναδοκίμασε: άνοιξε ξανά το έξοδο και πρόσθεσέ τη πάλι.");
+const parts=M.parts.map(p=>({a:parseFloat(p.a)||0,note:(p.note||'').trim(),d:p.d||'',ph:pphotos(p).filter(x=>x.url).map(x=>({url:x.url,fname:x.fname||''}))}))
   .filter(p=>p.a||p.note||p.ph.length||p.d);
 const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
 var _pd=parts.map(function(p){return p.d;}).filter(Boolean).sort();
@@ -1241,7 +1251,9 @@ snap();
 if(M.mode==='edit'){ if(M.ci===ci){cats[ci].log[M.li]=entry;} else {cats[M.ci].log.splice(M.li,1);cats[ci].log.push(entry);} }
 else if(M.mode==='group'){ cats[ci].log.push(entry); }
 else { cats[ci].log.push(entry); }
-cats[ci].open=true; markDirty(); closeModal(); render();}
+cats[ci].open=true; markDirty(); closeModal(); render();
+if(CLOUD.url&&(SESSION.pin||SESSION.admin)){cloudSave();}
+}
 function delFromModal(){if(!confirm("Διαγραφή αυτού του εξόδου;"))return; snap();
 const e=cats[M.ci].log[M.li]; cats[M.ci].log.splice(M.li,1);
 const back=e._plans||(e._plan?[e._plan]:[]);
