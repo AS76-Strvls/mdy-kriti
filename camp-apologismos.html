@@ -735,7 +735,7 @@ var badge=(st==='cancelled')?' <small style="color:var(--red)">✕ ακυρώθ�
 li.innerHTML=`<span class="chk" onclick="tog(${i})" title="τικ = έγινε"></span><span class="tx" onclick="openPendEdit(${i})" style="cursor:pointer">${p.t}${badge}</span>`
 +(st==='pending'?`<button class="p2" onclick="pendToPlan(${i})" title="Μετατροπή σε προγραμματισμένο έξοδο — μπαίνει στον «Σχεδιασμό επόμενων» με εκτίμηση κόστους, για να το συνδέσεις μετά με πραγματικό έξοδο">→ Σχεδιασμός εξόδου</button>`:'')
 +`<button class="p2" style="background:#f4f4f4;color:var(--muted)" onclick="openPendEdit(${i})" title="επεξεργασία">✎</button>`;pl.appendChild(li);});
-renderPlan(); renderIncome(); renderWallets(); renderUnpaid(); renderMiss(); renderCatSummary(); renderRecon(); renderClose(); renderSubs(); var _rt=document.getElementById("ap-report"); if(_rt&&!_rt.classList.contains("hide"))renderReport(); calc(); save();
+renderPlan(); renderIncome(); renderWallets(); renderUnpaid(); renderMiss(); renderCatSummary(); renderRecon(); renderClose(); renderSubs(); var _rt=document.getElementById("ap-report"); if(_rt&&!_rt.classList.contains("hide"))renderReport(); calc(); save(); if(typeof updLock==="function")updLock();
 }
 function renderWallets(){
  var box=document.getElementById("wallets");if(!box)return;
@@ -1486,6 +1486,7 @@ out.innerHTML=`${eur(price)} × ${N} = <b>${eur(s)}</b> <span class="pill ${fits
 }
 render();
 function cstat(html){const s=document.getElementById("cloudStatus");if(s)s.innerHTML=html;}
+function savestat(html){cstat(html);var fl=document.getElementById("floatLock");if(fl)fl.innerHTML=html;}
 async function cloudLoad(){
 if(!CLOUD.url){return;}
 if(dirty&&!confirm("Έχεις αλλαγές που ΔΕΝ αποθηκεύτηκαν στο κοινό ταμείο. Η φόρτωση θα τις αντικαταστήσει. Συνέχεια;"))return;
@@ -1520,29 +1521,27 @@ function notFoundUI(){
 async function cloudSave(){
 if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
 if(!CLOUD.key){alert("Δεν έχει οριστεί δράση.");return;}
-cstat("⏳ Αποθήκευση στο κοινό ταμείο…");
-var _nonce='sv'+Date.now()+Math.floor(Math.random()*1e4);
-function _payload(){return JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut(),_sv:_nonce}});}
-async function _verify(){try{var t=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now()+Math.random()).then(function(r){return r.text();});var c=JSON.parse(t);return !!(c&&c._sv===_nonce);}catch(e){return false;}}
+savestat("⏳ Αποθήκευση…");
+function _clean(k,v){return k==='_file'?undefined:v;}
+function _payload(){return JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut()}},_clean);}
 async function doSave(){
  try{
   var r=await fetch(CLOUD.url,{method:"POST",body:_payload()});
   var s=JSON.parse(await r.text());
   if(s&&s.error==="pin-required")return 'pin';
-  if(s&&s.ok&&!s.ping){ return (await _verify())?'ok':'retry'; }
+  if(s&&s.ok&&!s.ping)return 'ok';
  }catch(e){}
  return 'retry';
 }
 try{
 let res=await doSave();
-if(res==="pin"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){cstat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();res=await doSave();}
-var _t=0;while(res==="retry"&&_t<3){_t++;cstat("⏳ Αποθήκευση… (προσπάθεια "+(_t+1)+")");await new Promise(function(x){setTimeout(x,800);});res=await doSave();}
-if(res==="ok"){clearDirty();cstat("✅ Αποθηκεύτηκε <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
-else if(res==="pin"){cstat("🔒 Λάθος PIN — δεν αποθηκεύτηκε.");}
-else{cstat("⚠️ <b>ΔΕΝ επιβεβαιώθηκε η αποθήκευση</b> — ασταθής διακομιστής. Οι αλλαγές ΔΕΝ σώθηκαν — πάτα «☁ Αποθήκευση» ξανά.");}
-}catch(e){cstat("⚠️ Δεν αποθηκεύτηκε — έλεγξε σύνδεση.");}
+if(res==="pin"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){savestat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();res=await doSave();}
+var _t=0;while(res==="retry"&&_t<4){_t++;savestat("⏳ Αποθήκευση… (ξανά "+_t+")");await new Promise(function(x){setTimeout(x,700);});res=await doSave();}
+if(res==="ok"){clearDirty();savestat("✅ Αποθηκεύτηκε <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
+else if(res==="pin"){savestat("🔒 Λάθος PIN — δεν αποθηκεύτηκε.");}
+else{savestat("⚠️ Ασταθής σύνδεση — δεν πέρασε. Πάτα «☁ Αποθήκευση» ξανά.");}
+}catch(e){savestat("⚠️ Δεν αποθηκεύτηκε — έλεγξε σύνδεση.");}
 }
-
 function updFloat(){var fb=document.getElementById("floatbar");if(!fb)return;if(!CLOUD.url||!CLOUD.key){fb.style.display="none";return;}fb.style.display="flex";var el=document.getElementById("floatLock");
  if(SESSION.admin)el.innerHTML='🔓 Admin · '+(dirty?'<b style="color:var(--amber)">μη αποθηκευμένες αλλαγές</b>':'όλα αποθηκευμένα');
  else if(SESSION.pin)el.innerHTML='🔓 Edit · '+(dirty?'<b style="color:var(--amber)">μη αποθηκευμένες</b>':'αποθηκευμένα');
