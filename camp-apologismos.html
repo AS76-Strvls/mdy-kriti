@@ -424,7 +424,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 </div>
 <label style="font-size:12px;color:var(--muted)">Σημείωση (προαιρ.)</label>
 <input id="subNote" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:8px;margin:3px 0 9px;background:#fbfcf8">
-<label style="display:inline-block;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:9px;padding:10px 14px;cursor:pointer">📎 Φώτο / PDF απόδειξης<input id="subFile" type="file" accept="image/*,application/pdf" style="display:none" onchange="subPickFile(this.files[0])"></label>
+<label style="display:inline-block;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:9px;padding:10px 14px;cursor:pointer;margin-right:6px">📷 Κάμερα<input type="file" accept="image/*" capture="environment" style="display:none" onchange="subPickFile(this.files[0])"></label><label style="display:inline-block;background:#eef3e7;color:var(--spkd);font-weight:700;border-radius:9px;padding:10px 14px;cursor:pointer">📎 Αρχείο / PDF<input id="subFile" type="file" accept="image/*,application/pdf" style="display:none" onchange="subPickFile(this.files[0])"></label>
 <div id="subThumb" style="margin-top:8px;font-size:12px;color:var(--spkl)"></div>
 <div id="subMsg" style="margin-top:10px;font-size:13px"></div>
 <div style="display:flex;gap:8px;margin-top:14px">
@@ -1050,7 +1050,8 @@ box.innerHTML=M.parts.map((p,i)=>{
 <input class="pa" type="number" inputmode="decimal" placeholder="€" value="${p.a}" onchange="partA(${i},this.value)">
 <input class="pn" placeholder="απόδειξη / σημ." value="${(p.note||'').replace(/"/g,'&quot;')}" onchange="partNote(${i},this.value)">
 <input class="pd" type="date" value="${p.d||''}" onchange="partDate(${i},this.value)" title="ημ/νία αυτής της απόδειξης">
-<label class="photo">📷 +φωτό<input type="file" accept="image/*,application/pdf" onchange="partAddPhoto(${i},this.files[0]);this.value=''"></label>
+<label class="photo">📷 Κάμερα<input type="file" accept="image/*" capture="environment" onchange="partAddPhoto(${i},this.files[0]);this.value=''"></label>
+<label class="photo">📎 Αρχείο<input type="file" accept="image/*,application/pdf" onchange="partAddPhoto(${i},this.files[0]);this.value=''"></label>
 ${M.parts.length>1?`<button class="rm" onclick="rmPart(${i})">✕</button>`:''}
 ${thumbs}</div>`;
 }).join('');
@@ -1071,8 +1072,8 @@ function partAddPhoto(i,file){ if(!file)return;
   rd.readAsDataURL(file);
 }
 function partRmPhoto(i,k){ var arr=pphotos(M.parts[i]); if(k>=0&&k<arr.length)arr.splice(k,1); renderParts(); }
-function enhanceCtx(ctx,w,h){try{var id=ctx.getImageData(0,0,w,h),d=id.data,K=1.18,B=6;for(var p=0;p<d.length;p+=4){d[p]=Math.min(255,(d[p]-128)*K+128+B);d[p+1]=Math.min(255,(d[p+1]-128)*K+128+B);d[p+2]=Math.min(255,(d[p+2]-128)*K+128+B);}ctx.putImageData(id,0,0);}catch(e){}}
-function canvasToFile(c,file){var url=c.toDataURL("image/jpeg",0.82);var name=(((file&&file.name)||"apodeixi").replace(/\.[^.]+$/,''))+".jpg";return{name:name,type:"image/jpeg",data:url.replace(/^data:[^,]*,/,'')};}
+function enhanceCtx(ctx,w,h){try{var id=ctx.getImageData(0,0,w,h),d=id.data,K=1.10,B=4;for(var p=0;p<d.length;p+=4){d[p]=Math.min(255,(d[p]-128)*K+128+B);d[p+1]=Math.min(255,(d[p+1]-128)*K+128+B);d[p+2]=Math.min(255,(d[p+2]-128)*K+128+B);}ctx.putImageData(id,0,0);}catch(e){}}
+function canvasToFile(c,file){var url=c.toDataURL("image/jpeg",0.92);var name=(((file&&file.name)||"apodeixi").replace(/\.[^.]+$/,''))+".jpg";return{name:name,type:"image/jpeg",data:url.replace(/^data:[^,]*,/,'')};}
 /* Ουσιαστικό όνομα αρχείου απόδειξης: ΗΜ/ΝΙΑ_Προμηθευτής_Ποσό€_Πληρωτής.jpg (εύκολος συσχετισμός) */
 function sanFn(s){return String(s==null?'':s).replace(/[\\\/:*?"<>|·]+/g,'-').replace(/\s+/g,' ').replace(/^[-_ ]+|[-_ ]+$/g,'').slice(0,50);}
 function recFilename(d,vendor,payer,amount,ext){
@@ -1085,7 +1086,7 @@ function recFilename(d,vendor,payer,amount,ext){
 function extOf(t,fn){if(/pdf/i.test(t||'')||/\.pdf$/i.test(fn||''))return 'pdf';if(/png/i.test(t||''))return 'jpg';return 'jpg';}
 var CROP=null;
 function openCrop(file,cb){
-  function ready(bmp,w,h){var WMAX=1500,s=Math.min(1,WMAX/Math.max(w,h)),sw=Math.max(1,Math.round(w*s)),sh=Math.max(1,Math.round(h*s));
+  function ready(bmp,w,h){var WMAX=2600,s=Math.min(1,WMAX/Math.max(w,h)),sw=Math.max(1,Math.round(w*s)),sh=Math.max(1,Math.round(h*s));
     var sc=document.createElement("canvas");sc.width=sw;sc.height=sh;sc.getContext("2d").drawImage(bmp,0,0,sw,sh);
     CROP={src:sc,sw:sw,sh:sh,file:file,cb:cb,drag:-1,disp:1,pts:[{x:sw*0.08,y:sh*0.08},{x:sw*0.92,y:sh*0.08},{x:sw*0.92,y:sh*0.92},{x:sw*0.08,y:sh*0.92}]};
     showCropUI();}
@@ -1111,7 +1112,7 @@ function solve8(A,b){var n=8,i,j,k;for(i=0;i<n;i++){var mx=i;for(k=i+1;k<n;k++)i
 function homography(dst,src){var A=[],b=[];for(var i=0;i<4;i++){var U=dst[i].x,V=dst[i].y,X=src[i].x,Y=src[i].y;A.push([U,V,1,0,0,0,-U*X,-V*X]);b.push(X);A.push([0,0,0,U,V,1,-U*Y,-V*Y]);b.push(Y);}return solve8(A,b);}
 function applyCrop(){if(!CROP)return;var pts=CROP.pts,D=function(a,bb){return Math.hypot(a.x-bb.x,a.y-bb.y);};
   var W=Math.round(Math.max(D(pts[0],pts[1]),D(pts[3],pts[2]))),H=Math.round(Math.max(D(pts[0],pts[3]),D(pts[1],pts[2])));
-  W=Math.max(200,Math.min(1600,W));H=Math.max(200,Math.min(1600,H));
+  W=Math.max(200,Math.min(2600,W));H=Math.max(200,Math.min(2600,H));
   var dst=[{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}],h=homography(dst,pts);
   var sctx=CROP.src.getContext("2d"),sdata=sctx.getImageData(0,0,CROP.sw,CROP.sh).data,sw=CROP.sw,sh=CROP.sh;
   var oc=document.createElement("canvas");oc.width=W;oc.height=H;var octx=oc.getContext("2d"),od=octx.createImageData(W,H),o=od.data;
@@ -1126,13 +1127,13 @@ function cancelCrop(){if(!CROP)return;var cb=CROP.cb;closeCropUI();cb(null);}
 function closeCropUI(){document.getElementById("cropov").style.display="none";CROP=null;}
 // Βελτίωση απόδειξης: σωστός προσανατολισμός (EXIF) → σμίκρυνση (max 1600px) → ελαφρύ enhance αντίθεσης → JPEG συμπίεση
 function processReceiptImage(file,cb){
-  var MAXD=1600, Q=0.82;
+  var MAXD=2600, Q=0.9;
   function draw(src,w,h){
     var scale=Math.min(1, MAXD/Math.max(w,h));
     var cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
     var c=document.createElement("canvas");c.width=cw;c.height=ch;
     var ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,cw,ch);ctx.drawImage(src,0,0,cw,ch);
-    try{var id=ctx.getImageData(0,0,cw,ch),d=id.data,K=1.18,B=6;
+    try{var id=ctx.getImageData(0,0,cw,ch),d=id.data,K=1.10,B=4;
       for(var p=0;p<d.length;p+=4){d[p]=Math.min(255,(d[p]-128)*K+128+B);d[p+1]=Math.min(255,(d[p+1]-128)*K+128+B);d[p+2]=Math.min(255,(d[p+2]-128)*K+128+B);}
       ctx.putImageData(id,0,0);}catch(e){}
     var url=c.toDataURL("image/jpeg",Q);
