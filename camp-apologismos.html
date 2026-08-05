@@ -289,7 +289,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <div style="padding:4px 14px 10px"><button class="newexp" onclick="openNewExpense()">＋ Νέο έξοδο (διάλεξε κατηγορία)</button></div>
 <div id="missBadge" style="padding:0 14px 8px;font-size:12.5px"></div>
 <div id="cats"></div>
-<div style="padding:12px 14px"><button class="add-cat" onclick="addCat()">+ Νέα κατηγορία</button></div>
+<div style="padding:12px 14px" id="newCatRow"><button class="add-cat" onclick="showNewCat()">+ Νέα κατηγορία</button></div>
 </div>
 </section>
 <section id="ap-report" class="hide">
@@ -313,7 +313,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <div class="sheet">
 <h3 id="mTitle">Έξοδο</h3>
 <label>Κατηγορία *</label>
-<select id="mCat"></select>
+<select id="mCat" onchange="mCatChange()"></select>
+<input id="mNewCat" placeholder="Όνομα νέας κατηγορίας" style="display:none;width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:#fbfcf8">
 <div id="mProvs"></div>
 <label>Ημερομηνία *</label>
 <input id="mDate" type="date">
@@ -372,6 +373,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <div class="chint">✂️ Σύρε τις 4 γωνίες πάνω στην απόδειξη — θα ισιωθεί σαν σκαναρισμένη. Ή «Πρωτότυπο» για τη φωτό όπως-είναι (μέγιστη ποιότητα).</div>
 <canvas id="cropCanvas"></canvas>
 <div class="cbtns">
+<button class="cb-skip" onclick="cropRotate()">⟳ Στροφή</button>
 <button class="cb-apply" onclick="applyCrop()">✓ Εφαρμογή crop</button>
 <button class="cb-skip" onclick="skipCrop()">📷 Πρωτότυπο</button>
 <button class="cb-cancel" onclick="cancelCrop()">Άκυρο</button>
@@ -997,7 +999,12 @@ function savePendEdit(){var t=document.getElementById("pendT").value.trim();if(!
  closePendEdit();markDirty();render();}
 function delPendEdit(){if(!PENDM||PENDM.mode!=='edit')return;if(!confirm("Διαγραφή εκκρεμότητας;"))return;snap();pend.splice(PENDM.i,1);closePendEdit();markDirty();render();}
 function closePendEdit(){document.getElementById("ovpend").style.display="none";PENDM=null;}
-function addCat(){const n=prompt("Όνομα κατηγορίας:");if(n){snap();cats.unshift({n,log:[],open:true});markDirty();render();}}
+function showNewCat(){var r=document.getElementById("newCatRow");if(!r)return;
+ r.innerHTML='<div style="display:flex;gap:6px;align-items:center"><input id="newCatName" placeholder="Όνομα κατηγορίας" style="flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:#fbfcf8" onkeydown="if(event.key===\'Enter\')addCat()"><button class="add-cat" style="width:auto;padding:10px 14px" onclick="addCat()">Πρόσθεσε</button><button style="border:0;background:#eef3e7;color:var(--muted);border-radius:8px;padding:10px 12px;font-weight:700" onclick="resetNewCat()">✕</button></div>';
+ var el=document.getElementById("newCatName");if(el)el.focus();}
+function resetNewCat(){var r=document.getElementById("newCatRow");if(r)r.innerHTML='<button class="add-cat" onclick="showNewCat()">+ Νέα κατηγορία</button>';}
+function mCatChange(){var v=(document.getElementById("mCat")||{}).value,el=document.getElementById("mNewCat");if(!el)return;el.style.display=(v==="__new")?"":"none";if(v==="__new")el.focus();}
+function addCat(){var el=document.getElementById("newCatName");var n=el?el.value.trim():"";if(!n){if(el)el.focus();return;}snap();cats.unshift({n:n,log:[],open:true});markDirty();resetNewCat();render();if(CLOUD.url&&(SESSION.pin||SESSION.admin))cloudSave();}
 function pendToPlan(i){const p=pend[i];
 const est=parseFloat(prompt("Εκτιμώμενο ποσό για τα «Επόμενα» (€):",""));
 snap();
@@ -1005,7 +1012,7 @@ plan.push({day:"Εκκρεμότητα",label:p.t.replace(/^💶\s*/,''),what:""
 pend[i].d=true;pend[i].s='done'; markDirty(); render();}
 /* ---- Παράθυρο επεξεργασίας / νέο έξοδο (με upload αποδείξεων) ---- */
 let M={mode:'new',ci:0,li:-1,t:'',vendor:'',exp:'',parts:[{a:'',note:''}]};
-function openModal(){document.getElementById("ov").classList.add("on");}
+function openModal(){var _mn=document.getElementById("mNewCat");if(_mn){_mn.style.display="none";_mn.value="";}document.getElementById("ov").classList.add("on");}
 function closeModal(){document.getElementById("ov").classList.remove("on");}
 function buildCatSelect(sel){const s=document.getElementById("mCat");
 s.innerHTML=cats.map((c,i)=>`<option value="${i}">${c.n}</option>`).join('')+`<option value="__new">➕ Νέα / έκτακτη κατηγορία…</option>`;
@@ -1126,6 +1133,7 @@ function skipCrop(){if(!CROP)return;var file=CROP.file,cb=CROP.cb;closeCropUI();
   if(file&&/^image\//.test(file.type||'')){var rd=new FileReader();rd.onload=function(){cb({name:(file.name||'apodeixi'),type:file.type||'image/jpeg',data:String(rd.result).replace(/^data:[^,]*,/,'')});};rd.onerror=function(){processReceiptImage(file,cb);};rd.readAsDataURL(file);}
   else processReceiptImage(file,cb);
 }
+function cropRotate(){if(!CROP)return;var src=CROP.src,w=CROP.sw,h=CROP.sh;var c=document.createElement("canvas");c.width=h;c.height=w;var ctx=c.getContext("2d");ctx.translate(h/2,w/2);ctx.rotate(Math.PI/2);ctx.drawImage(src,-w/2,-h/2);CROP.src=c;CROP.sw=h;CROP.sh=w;CROP.pts=[{x:h*0.08,y:w*0.08},{x:h*0.92,y:w*0.08},{x:h*0.92,y:w*0.92},{x:h*0.08,y:w*0.92}];showCropUI();}
 function cancelCrop(){if(!CROP)return;var cb=CROP.cb;closeCropUI();cb(null);}
 function closeCropUI(){document.getElementById("cropov").style.display="none";CROP=null;}
 // Βελτίωση απόδειξης: σωστός προσανατολισμός (EXIF) → σμίκρυνση (max 1600px) → ελαφρύ enhance αντίθεσης → JPEG συμπίεση
@@ -1204,7 +1212,7 @@ M.d=document.getElementById("mDate").value;
 var _wv=document.getElementById("mWallet").value;if(_wv==="__pending"){M.unpaid=true;M.wallet="";}else{M.unpaid=false;M.wallet=_wv;}
 M.fund=document.getElementById("mFund").value.trim();
 let cv=document.getElementById("mCat").value, ci;
-if(cv==="__new"){const n=(prompt("Όνομα νέας / έκτακτης κατηγορίας:","Έκτακτα")||"").trim();if(!n)return;
+if(cv==="__new"){const n=((document.getElementById("mNewCat")||{}).value||"").trim();if(!n){alert("Γράψε όνομα νέας κατηγορίας.");var _mn=document.getElementById("mNewCat");if(_mn)_mn.focus();return;}
 let ex=cats.findIndex(c=>c.n===n); if(ex>=0)ci=ex; else{cats.push({n,log:[]});ci=cats.length-1;}}
 else ci=parseInt(cv);
 // upload τυχόν νέων φωτό
