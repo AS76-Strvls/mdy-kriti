@@ -319,9 +319,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <label>Ημερομηνία *</label>
 <input id="mDate" type="date">
 <label>Προμηθευτής *</label>
-<input id="mVendor" placeholder="π.χ. Lidl, ΣΥΝΚΑ, ταβέρνα">
+<input id="mVendor" list="dlVendor" onkeydown="mEnter(event)" placeholder="π.χ. Lidl, ΣΥΝΚΑ, ταβέρνα"><datalist id="dlVendor"></datalist>
+<label>Ποιος αγόρασε — άτομο <span style="font-weight:400">(προαιρετικό, ανεξ. ποιος πλήρωσε)</span></label>
+<input id="mPayer" list="dlPayer" onkeydown="mEnter(event)" placeholder="π.χ. Νικόλας, Πόρος, Μαρίνα"><datalist id="dlPayer"></datalist>
 <label>Λεπτομέριες <span style="font-weight:400">(προαιρετικό)</span></label>
-<input id="mT" placeholder="π.χ. τρόφιμα/καθαριστικά, γεύμα 19/7">
+<input id="mT" onkeydown="mEnter(event)" placeholder="π.χ. τρόφιμα/καθαριστικά, γεύμα 19/7">
 <input id="mExp" type="hidden">
 <label>Αποδείξεις <span style="font-weight:400">— Ποσό · σημείωση · 📎 φωτό/PDF · <b>0 = δωρεάν</b> · σύνολο auto</span></label>
 <div class="parts" id="mParts"></div>
@@ -598,9 +600,10 @@ function entryRowHtml(e,ci,li,showCat,opt){
   const upd=e.unpaid?` <small style="color:var(--amber);font-weight:700">⏳ εκκρεμεί</small>`:'';
   const fnd=e.fund?` <small style="color:var(--muted)">(${e.fund})</small>`:'';
   const _amt=(opt&&opt.amt!=null)?opt.amt:(+e.a||0);
+  const pyr=e.payer?(' <small style="color:var(--muted)">👤 '+esc(e.payer)+'</small>'):'';
   const revert=((SESSION.pin||SESSION.admin)&&!e.unpaid&&(+e.a||0)>0)?` <button onclick="unpayEntry(${ci},${li},event)" title="Επανέφερε σε εκκρεμές (μη πληρωμένο)" style="border:0;background:var(--amberbg);color:var(--amber);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;cursor:pointer">↩</button>`:'';
   const _tag=(opt&&opt.tag)?` <small style="color:var(--spkl)">${opt.tag}</small>`:'';
-  return `<div onclick="openEdit(${ci},${li})" style="cursor:pointer"><span>${noTag}${em}${ttl}${_tag}${catl}${upd}${fnd}${vtxt}${multi}${clip}${miss}${wch}${revert} <span style="color:var(--spkl);font-size:11px">✎</span></span><span>${eur(_amt)}</span></div>`;
+  return `<div onclick="openEdit(${ci},${li})" style="cursor:pointer"><span>${noTag}${em}${ttl}${_tag}${catl}${pyr}${upd}${fnd}${vtxt}${multi}${clip}${miss}${wch}${revert} <span style="color:var(--spkl);font-size:11px">✎</span></span><span>${eur(_amt)}</span></div>`;
 }
 function renderExpByDate(box){
   var arr=[];
@@ -846,7 +849,7 @@ function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
  var ci=catByName('Άλλο');if(ci<0)ci=0;
  var unpaid=/ΑΠΛΗΡΩΤΟ/.test(s.note||'');
  var cw=unpaid?'':((wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'');
- M={mode:'new',ci:ci,li:-1,d:(s.d||today()),t:'',vendor:s.exp||'',exp:'',wallet:cw,unpaid:unpaid,fund:'',parts:[{a:(+s.amount||0),note:s.note||'',d:(s.d||''),ph:(s.url?[{url:s.url,fname:s.fname||''}]:[])}],_plan:null,_plans:null,_alloc:[],_fromSub:s.id};
+ M={mode:'new',ci:ci,li:-1,d:(s.d||today()),t:'',vendor:s.exp||'',payer:s.submitter||'',exp:'',wallet:cw,unpaid:unpaid,fund:'',parts:[{a:(+s.amount||0),note:s.note||'',d:(s.d||''),ph:(s.url?[{url:s.url,fname:s.fname||''}]:[])}],_plan:null,_plans:null,_alloc:[],_fromSub:s.id};
  buildCatSelect(ci);
  document.getElementById("mTitle").textContent="Έγκριση → έξοδο (διάλεξε κατηγορία)";
  document.getElementById("mDel").style.display="none";
@@ -1023,7 +1026,7 @@ function closeModal(){document.getElementById("ov").classList.remove("on");}
 function buildCatSelect(sel){const s=document.getElementById("mCat");
 s.innerHTML=cats.map((c,i)=>`<option value="${i}">${c.n}</option>`).join('')+`<option value="__new">➕ Νέα / έκτακτη κατηγορία…</option>`;
 s.value=(sel>=0?String(sel):"0");}
-function openNewExpense(){M={mode:'new',ci:-1,li:-1,d:today(),t:'',vendor:'',exp:'',wallet:'',unpaid:true,fund:'',parts:[{a:'',note:''}],_plan:null,_plans:null,_alloc:[]};
+function openNewExpense(){M={mode:'new',ci:-1,li:-1,d:today(),t:'',vendor:'',payer:'',exp:'',wallet:'',unpaid:true,fund:'',parts:[{a:'',note:''}],_plan:null,_plans:null,_alloc:[]};
 buildCatSelect(-1);
 document.getElementById("mTitle").textContent="Νέο έξοδο";
 document.getElementById("mDel").style.display="none";
@@ -1031,13 +1034,15 @@ document.getElementById("mRestore").style.display="none";
 fillModal();openModal();}
 function openEdit(ci,li){const e=cats[ci].log[li];
 const parts=(e.parts&&e.parts.length)?e.parts.map(p=>({a:p.a,note:p.note||'',d:p.d||'',ph:(Array.isArray(p.ph)?p.ph.filter(x=>x.url).map(x=>({url:x.url,fname:x.fname||''})):(p.url?[{url:p.url,fname:p.fname||''}]:[]))})):[{a:(+e.a||0),note:'',d:'',ph:[]}];
-M={mode:'edit',ci,li,d:isoOf(e),t:e.t||'',vendor:e.vendor||'',exp:(e.exp!=null?e.exp:''),wallet:e.wallet||'',unpaid:e.unpaid||false,fund:e.fund||'',parts,_plan:e._plan||null,_plans:e._plans||null,_alloc:(e._alloc||[]).map(function(a){return {pid:a.pid,a:a.a,manual:true};})};
+M={mode:'edit',ci,li,d:isoOf(e),t:e.t||'',vendor:e.vendor||'',payer:e.payer||'',exp:(e.exp!=null?e.exp:''),wallet:e.wallet||'',unpaid:e.unpaid||false,fund:e.fund||'',parts,_plan:e._plan||null,_plans:e._plans||null,_alloc:(e._alloc||[]).map(function(a){return {pid:a.pid,a:a.a,manual:true};})};
 buildCatSelect(ci);
 document.getElementById("mTitle").textContent="Επεξεργασία εξόδου";
 document.getElementById("mDel").style.display="";
 document.getElementById("mRestore").style.display=(e._plan||e._plans)?"":"none";
 fillModal();openModal();}
-function fillModal(){document.getElementById("mT").value=M.t;document.getElementById("mVendor").value=M.vendor;
+function mEnter(e){if(e&&e.key==='Enter'){e.preventDefault();saveModal();}}
+function fillDatalists(){var vs={},ps={};cats.forEach(function(c){c.log.forEach(function(e){if(e.vendor)vs[e.vendor]=1;if(e.payer)ps[e.payer]=1;});});var dv=document.getElementById("dlVendor");if(dv)dv.innerHTML=Object.keys(vs).sort().map(function(x){return '<option value="'+esc(x)+'">';}).join('');var dp=document.getElementById("dlPayer");if(dp)dp.innerHTML=Object.keys(ps).sort().map(function(x){return '<option value="'+esc(x)+'">';}).join('');}
+function fillModal(){fillDatalists();document.getElementById("mT").value=M.t;document.getElementById("mVendor").value=M.vendor;var _mp=document.getElementById("mPayer");if(_mp)_mp.value=M.payer||"";
 document.getElementById("mExp").value=M.exp;document.getElementById("mDate").value=M.d||today();
 var ws=document.getElementById("mWallet");
 ws.innerHTML='<option value="__pending">⏳ Εκκρεμεί — δεν πληρώθηκε ακόμα</option><option value="">✔ Πληρώθηκε — κοινό ταμείο</option>'+wallets.map(function(w){return '<option value="'+w.id+'">✔ '+(w.cash?'💵 ':'🏦 ')+w.name+'</option>';}).join('');
@@ -1230,7 +1235,7 @@ async function uploadPhoto(x,name){ // ανεβάζει ένα φωτό/PDF (x._
 }
 async function saveModal(){
 M.t=document.getElementById("mT").value.trim();
-M.vendor=document.getElementById("mVendor").value.trim();
+M.vendor=document.getElementById("mVendor").value.trim();var _mpv=document.getElementById("mPayer");M.payer=_mpv?_mpv.value.trim():(M.payer||"");
 M.exp=document.getElementById("mExp").value;
 M.d=document.getElementById("mDate").value;
 var _wv=document.getElementById("mWallet").value;if(_wv==="__pending"){M.unpaid=true;M.wallet="";}else{M.unpaid=false;M.wallet=_wv;}
@@ -1265,8 +1270,8 @@ if(_failedPh)alert("⚠ "+_failedPh+" φωτό δεν ανέβηκε (ασταθ
 const parts=M.parts.map(p=>({a:parseFloat(p.a)||0,note:(p.note||'').trim(),d:p.d||'',ph:pphotos(p).filter(x=>x.url).map(x=>({url:x.url,fname:x.fname||''}))}))
   .filter(p=>p.a||p.note||p.ph.length||p.d);
 const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
-var _pd=parts.map(function(p){return p.d;}).filter(Boolean).sort();
-if(_pd.length)M.d=_pd[0];   /* αν οι αποδείξεις έχουν ημ/νία → γίνεται η ημ/νία του εξόδου (η νωρίτερη) */
+var _pd='';for(var _pi3=0;_pi3<parts.length;_pi3++){if(parts[_pi3].d){_pd=parts[_pi3].d;break;}}
+if(_pd)M.d=_pd;   /* αν οι αποδείξεις έχουν ημ/νία → γίνεται η ημ/νία του εξόδου (η νωρίτερη) */
 let t=M.t||"έξοδο"; if(total===0&&!/δωρε/i.test(t)) t+=" — δωρεάν";
 const entry={t,a:total};
 if(M.d)entry.d=M.d;
@@ -1275,6 +1280,7 @@ if(M.exp!==''&&M.exp!=null&&!isNaN(parseFloat(M.exp)))entry.exp=parseFloat(M.exp
 if(M.wallet)entry.wallet=M.wallet;
 if(M.unpaid)entry.unpaid=true;
 if(M.fund)entry.fund=M.fund;
+if(M.payer)entry.payer=M.payer;
 if(parts.length>1||parts.some(p=>p.ph.length))entry.parts=parts;
 if(M._plan)entry._plan=M._plan;
 if(M._alloc&&M._alloc.length){entry._alloc=M._alloc.map(function(a){return {pid:a.pid,a:Math.round((+a.a||0)*100)/100};});entry._plans=M._alloc.map(function(a){var p=provItem(a.pid)||{};return {day:p.day,label:p.label,what:p.what||'',est:+p.est||0,type:p.type||'act'};});M._alloc.forEach(function(a){var p=provItem(a.pid);if(p)p.sel=false;});}
@@ -1308,7 +1314,7 @@ function isoOf(e){if(e.d)return e.d;const m=(e.t||'').match(/(\d{1,2})\/(\d{1,2}
 function ddmm(iso){if(!iso)return "—";const p=iso.split("-");return p.length===3?(p[2]+"/"+p[1]):iso;}
 function reportRows(){const rows=[];
 cats.forEach((c,ci)=>c.log.forEach((e,li)=>{const r=receiptsOf(e);const urls=entryPhotoUrls(e);
-rows.push({no:e.__no,iso:isoOf(e),cat:c.n,t:e.t||'',vendor:e.vendor||'',a:+e.a||0,n:r.n,files:r.files,nph:r.nph,urls:urls,url:urls[0]||'',wallet:e.wallet||'',unpaid:e.unpaid||false,ci:ci,li:li});}));
+rows.push({no:e.__no,iso:isoOf(e),cat:c.n,t:e.t||'',vendor:e.vendor||'',payer:e.payer||'',a:+e.a||0,n:r.n,files:r.files,nph:r.nph,urls:urls,url:urls[0]||'',wallet:e.wallet||'',unpaid:e.unpaid||false,ci:ci,li:li});}));
 rows.sort((x,y)=>{const a=x.iso||"9999-99-99",b=y.iso||"9999-99-99";return a<b?-1:a>b?1:0;});return rows;}
 function openReport(){const rows=reportRows(),grand=rows.reduce((s,r)=>s+r.a,0),byCat={};
 rows.forEach(r=>byCat[r.cat]=(byCat[r.cat]||0)+r.a);
@@ -1374,7 +1380,7 @@ function renderReport(){
       +(r.unpaid?' <button class="pbuy" style="padding:3px 7px" onclick="repPay('+r.ci+','+r.li+')" title="σήμανση ως πληρωμένο (+ πηγή)">✔</button>':'');
    }
   }
-  h+='<tr><td class="n" style="color:var(--spkl);font-weight:700">'+(r.no||'')+'</td><td>'+ddmm(r.iso)+'</td><td>'+r.t+'</td><td>'+catEmoji(r.cat)+' '+r.cat+'</td><td>'+(r.vendor||'')+'</td><td>'+w+'</td><td>'+rec+'</td><td class="n">'+eur(r.a)+'</td>'+(canEd?('<td>'+act+'</td>'):'')+'</tr>';});
+  h+='<tr><td class="n" style="color:var(--spkl);font-weight:700">'+(r.no||'')+'</td><td>'+ddmm(r.iso)+'</td><td>'+r.t+'</td><td>'+catEmoji(r.cat)+' '+r.cat+'</td><td>'+(r.vendor||'')+(r.payer?' <small style="color:var(--muted)">👤 '+esc(r.payer)+'</small>':'')+'</td><td>'+w+'</td><td>'+rec+'</td><td class="n">'+eur(r.a)+'</td>'+(canEd?('<td>'+act+'</td>'):'')+'</tr>';});
  h+='<tr class="tot"><td colspan="7">ΣΥΝΟΛΟ ('+rows.length+' εγγρ.)</td><td class="n">'+eur(grand)+'</td>'+(canEd?'<td></td>':'')+'</tr>'+(spentSystem()?'<tr><td colspan="7" style="color:var(--muted)">εκ των οποίων 🏦 Σύστημα (προπληρωμές) / 💵 μετρητά</td><td class="n" style="color:var(--muted)">'+eur(spentSystem())+' / '+eur(tot().spent)+'</td>'+(canEd?'<td></td>':'')+'</tr>':'')+'</table>';
  h+='<h4>Σύνολα ανά κατηγορία (πραγματικό vs προϋπ.)</h4><table><tr><th>Κατηγορία</th><th class="n">Πραγματικό</th><th class="n">Προϋπ.</th><th class="n">Δ</th><th class="n">/παιδί</th></tr>';
  Object.keys(byCat).forEach(function(k){var bud=CATBUD[k]||0,dv=bud?byCat[k]-bud:0;
