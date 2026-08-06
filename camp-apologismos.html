@@ -851,8 +851,8 @@ function catByName(n){for(var k=0;k<cats.length;k++)if(cats[k].n===n)return k;re
 function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
  if(!cats.length){alert("Φτιάξε πρώτα μια κατηγορία (Έξοδα → + Νέα κατηγορία).");return;}
  var ci=catByName('Άλλο');if(ci<0)ci=0;
- var unpaid=/ΑΠΛΗΡΩΤΟ/.test(s.note||'');
- var cw=unpaid?'':((wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'');
+ var unpaid=true;
+ var cw='';
  M={mode:'new',ci:ci,li:-1,d:(s.d||today()),t:'',vendor:s.exp||'',payer:s.submitter||'',exp:'',wallet:cw,unpaid:unpaid,fund:'',parts:[{a:(+s.amount||0),note:s.note||'',d:(s.d||''),ph:(s.url?[{url:s.url,fname:s.fname||''}]:[])}],_plan:null,_plans:null,_alloc:[],_fromSub:s.id};
  buildCatSelect(ci);
  document.getElementById("mTitle").textContent="Έγκριση → έξοδο (διάλεξε κατηγορία)";
@@ -1297,7 +1297,7 @@ snap();
 if(M.mode==='edit'){ if(M.ci===ci){cats[ci].log[M.li]=entry;} else {cats[M.ci].log.splice(M.li,1);cats[ci].log.push(entry);} }
 else if(M.mode==='group'){ cats[ci].log.push(entry); }
 else { cats[ci].log.push(entry); }
-if(M._fromSub){var _sb2=subs.filter(function(x){return x.id===M._fromSub;})[0];if(_sb2){_sb2.status='approved';_sb2.approvedTs=today();}}
+if(M._fromSub){var _sb2=subs.filter(function(x){return x.id===M._fromSub;})[0];if(_sb2){_sb2.status='approved';_sb2.approvedTs=today();_sb2.amount=total;if(!M.unpaid){_sb2.paid=true;_sb2.paidTs=today();_sb2.paidFrom=(M.wallet?walletName(M.wallet):'Κοινό ταμείο');}}}
 cats[ci].open=true; markDirty(); closeModal(); render();
 if(CLOUD.url&&(SESSION.pin||SESSION.admin)){cloudSave();}
 }
