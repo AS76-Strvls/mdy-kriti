@@ -1057,7 +1057,8 @@ box.innerHTML=M.parts.map((p,i)=>{
     else if(x._file) inner='<span>📄 '+lbl+(x.fname||x._file.name)+' (τοπικά)</span>';
     else if(x.url) inner='<a href="'+x.url+'" target="_blank">📎 '+lbl+(x.fname||'απόδειξη')+'</a>';
     else return '';
-    return '<div class="thumb">'+inner+' <button class="rm" style="font-size:13px;padding:0 6px" onclick="partRmPhoto('+i+','+k+')" title="αφαίρεση φωτό">✕</button></div>';
+    var editBtn=(x.url&&!/\.pdf$/i.test(x.fname||'')&&(SESSION.pin||SESSION.admin))?' <button class="rm" style="font-size:13px;padding:0 6px;color:var(--spkl)" onclick="editPhoto('+i+','+k+')" title="επεξεργασία (crop/στροφή)">✏️</button>':'';
+    return '<div class="thumb">'+inner+editBtn+' <button class="rm" style="font-size:13px;padding:0 6px" onclick="partRmPhoto('+i+','+k+')" title="αφαίρεση φωτό">✕</button></div>';
   }).join('');
   return `<div class="prow2">
 <input class="pa" type="number" inputmode="decimal" placeholder="€" value="${p.a}" onchange="partA(${i},this.value)">
@@ -1085,6 +1086,23 @@ function partAddPhoto(i,file){ if(!file)return;
   rd.readAsDataURL(file);
 }
 function partRmPhoto(i,k){ var arr=pphotos(M.parts[i]); if(k>=0&&k<arr.length)arr.splice(k,1); renderParts(); }
+function b64ToBlob(b64,type){var bin=atob(String(b64||'').replace(/\s/g,''));var len=bin.length,arr=new Uint8Array(len);for(var i=0;i<len;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:type||'image/jpeg'});}
+async function editPhoto(i,k){
+  if(!(SESSION.pin||SESSION.admin)){alert("Χρειάζεται PIN — ξεκλείδωσε πρώτα.");return;}
+  var arr=pphotos(M.parts[i]);var ph=arr[k];if(!ph||!ph.url)return;
+  ph._busy=true;renderParts();
+  try{
+    var r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"getReceipt",key:CLOUD.key,url:ph.url})});
+    var s=JSON.parse(await r.text());
+    delete ph._busy;
+    if(!s||!s.ok||!s.data){renderParts();alert("Δεν κατέβηκε η φωτό για επεξεργασία — δοκίμασε ξανά.");return;}
+    openCrop(b64ToBlob(s.data,s.type),function(out){
+      if(!out){renderParts();return;}
+      var nm=ph.fname||'apodeixi.jpg';var np={_file:out,fname:nm,_busy:true};arr[k]=np;renderParts();
+      uploadPhoto(np,nm).then(function(){delete np._busy;markDirty();renderParts();});
+    });
+  }catch(e){delete ph._busy;renderParts();alert("Σφάλμα επεξεργασίας.");}
+}
 function enhanceCtx(ctx,w,h){try{var id=ctx.getImageData(0,0,w,h),d=id.data,K=1.10,B=4;for(var p=0;p<d.length;p+=4){d[p]=Math.min(255,(d[p]-128)*K+128+B);d[p+1]=Math.min(255,(d[p+1]-128)*K+128+B);d[p+2]=Math.min(255,(d[p+2]-128)*K+128+B);}ctx.putImageData(id,0,0);}catch(e){}}
 function canvasToFile(c,file){var url=c.toDataURL("image/jpeg",0.92);var name=(((file&&file.name)||"apodeixi").replace(/\.[^.]+$/,''))+".jpg";return{name:name,type:"image/jpeg",data:url.replace(/^data:[^,]*,/,'')};}
 /* Ουσιαστικό όνομα αρχείου απόδειξης: ΗΜ/ΝΙΑ_Προμηθευτής_Ποσό€_Πληρωτής.jpg (εύκολος συσχετισμός) */
