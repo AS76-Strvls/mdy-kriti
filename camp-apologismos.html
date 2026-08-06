@@ -1297,7 +1297,8 @@ snap();
 if(M.mode==='edit'){ if(M.ci===ci){cats[ci].log[M.li]=entry;} else {cats[M.ci].log.splice(M.li,1);cats[ci].log.push(entry);} }
 else if(M.mode==='group'){ cats[ci].log.push(entry); }
 else { cats[ci].log.push(entry); }
-if(M._fromSub){var _sb2=subs.filter(function(x){return x.id===M._fromSub;})[0];if(_sb2){_sb2.status='approved';_sb2.approvedTs=today();_sb2.amount=total;if(!M.unpaid){_sb2.paid=true;_sb2.paidTs=today();_sb2.paidFrom=(M.wallet?walletName(M.wallet):'Κοινό ταμείο');}}}
+if(M._fromSub){var _sb2=subs.filter(function(x){return x.id===M._fromSub;})[0];if(_sb2){_sb2.status='approved';_sb2.approvedTs=today();_sb2.entryId=entry.id;}}
+var _lk=(entry.id?subs.filter(function(x){return x.entryId===entry.id;}):[])[0];if(_lk){_lk.amount=total;_lk.exp=(M.vendor||M.t||_lk.exp);if(!M.unpaid){_lk.paid=true;if(!_lk.paidTs)_lk.paidTs=today();_lk.paidFrom=(M.wallet?walletName(M.wallet):'Κοινό ταμείο');}else{_lk.paid=false;_lk.paidFrom='';}}
 cats[ci].open=true; markDirty(); closeModal(); render();
 if(CLOUD.url&&(SESSION.pin||SESSION.admin)){cloudSave();}
 }
