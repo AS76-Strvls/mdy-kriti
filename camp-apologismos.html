@@ -842,12 +842,16 @@ function renderSubs(){
 function needPin(){if(!(SESSION.pin||SESSION.admin)){unlockEdit();return true;}return false;}
 function catByName(n){for(var k=0;k<cats.length;k++)if(cats[k].n===n)return k;return -1;}
 function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
- var ci=catByName('Άλλο');if(ci<0)ci=cats.length-1;if(ci<0)return;
- var cw=(wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'';
- var e={t:s.exp||'(έξοδο)',a:Math.round((+s.amount||0)*100)/100,vendor:s.exp||'',payer:s.submitter||'',wallet:cw,d:(s.d||today())};
- if(/ΑΠΛΗΡΩΤΟ/.test(s.note||''))e.unpaid=true;   // «να πληρωθεί ο προμηθευτής»
- if(s.url)e.parts=[{a:e.a,note:s.note||'',d:(s.d||''),ph:[{url:s.url,fname:s.fname||''}]}];
- snap();cats[ci].log.push(e);cats[ci].open=true;s.status='approved';s.approvedTs=today();markDirty();render();}
+ if(!cats.length){alert("Φτιάξε πρώτα μια κατηγορία (Έξοδα → + Νέα κατηγορία).");return;}
+ var ci=catByName('Άλλο');if(ci<0)ci=0;
+ var unpaid=/ΑΠΛΗΡΩΤΟ/.test(s.note||'');
+ var cw=unpaid?'':((wallets.filter(function(w){return w.cash;})[0]||wallets[0]||{}).id||'');
+ M={mode:'new',ci:ci,li:-1,d:(s.d||today()),t:'',vendor:s.exp||'',exp:'',wallet:cw,unpaid:unpaid,fund:'',parts:[{a:(+s.amount||0),note:s.note||'',d:(s.d||''),ph:(s.url?[{url:s.url,fname:s.fname||''}]:[])}],_plan:null,_plans:null,_alloc:[],_fromSub:s.id};
+ buildCatSelect(ci);
+ document.getElementById("mTitle").textContent="Έγκριση → έξοδο (διάλεξε κατηγορία)";
+ document.getElementById("mDel").style.display="none";
+ document.getElementById("mRestore").style.display="none";
+ fillModal();openModal();}
 function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("Απόρριψη αυτής της υποβολής;"))return;snap();s.status='rejected';markDirty();render();}
 function unrejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;s.status='pending';markDirty();render();}
 function markPaid(i){var s=subs[i];if(!s)return;if(needPin())return;payChoosing=s.id;render();}
@@ -1261,6 +1265,7 @@ snap();
 if(M.mode==='edit'){ if(M.ci===ci){cats[ci].log[M.li]=entry;} else {cats[M.ci].log.splice(M.li,1);cats[ci].log.push(entry);} }
 else if(M.mode==='group'){ cats[ci].log.push(entry); }
 else { cats[ci].log.push(entry); }
+if(M._fromSub){var _sb2=subs.filter(function(x){return x.id===M._fromSub;})[0];if(_sb2){_sb2.status='approved';_sb2.approvedTs=today();}}
 cats[ci].open=true; markDirty(); closeModal(); render();
 if(CLOUD.url&&(SESSION.pin||SESSION.admin)){cloudSave();}
 }
