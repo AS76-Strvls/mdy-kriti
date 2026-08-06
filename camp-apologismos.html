@@ -1038,7 +1038,7 @@ document.getElementById("mRestore").style.display="none";
 fillModal();openModal();}
 function openEdit(ci,li){const e=cats[ci].log[li];
 const parts=(e.parts&&e.parts.length)?e.parts.map(p=>({a:p.a,note:p.note||'',d:p.d||'',ph:(Array.isArray(p.ph)?p.ph.filter(x=>x.url).map(x=>({url:x.url,fname:x.fname||''})):(p.url?[{url:p.url,fname:p.fname||''}]:[]))})):[{a:(+e.a||0),note:'',d:'',ph:[]}];
-M={mode:'edit',ci,li,d:isoOf(e),t:e.t||'',vendor:e.vendor||'',payer:e.payer||'',enteredBy:e.enteredBy||'',exp:(e.exp!=null?e.exp:''),wallet:e.wallet||'',unpaid:e.unpaid||false,fund:e.fund||'',parts,_plan:e._plan||null,_plans:e._plans||null,_alloc:(e._alloc||[]).map(function(a){return {pid:a.pid,a:a.a,manual:true};})};
+M={mode:'edit',ci,li,id:e.id||'',d:isoOf(e),t:e.t||'',vendor:e.vendor||'',payer:e.payer||'',enteredBy:e.enteredBy||'',exp:(e.exp!=null?e.exp:''),wallet:e.wallet||'',unpaid:e.unpaid||false,fund:e.fund||'',parts,_plan:e._plan||null,_plans:e._plans||null,_alloc:(e._alloc||[]).map(function(a){return {pid:a.pid,a:a.a,manual:true};})};
 buildCatSelect(ci);
 document.getElementById("mTitle").textContent="Επεξεργασία εξόδου";
 document.getElementById("mDel").style.display="";
@@ -1280,7 +1280,7 @@ const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
 var _pd='';for(var _pi3=0;_pi3<parts.length;_pi3++){if(parts[_pi3].d){_pd=parts[_pi3].d;break;}}
 if(_pd)M.d=_pd;   /* αν οι αποδείξεις έχουν ημ/νία → γίνεται η ημ/νία του εξόδου (η νωρίτερη) */
 let t=M.t||"έξοδο"; if(total===0&&!/δωρε/i.test(t)) t+=" — δωρεάν";
-const entry={t,a:total};
+const entry={t,a:total};entry.id=M.id||newId();
 if(M.d)entry.d=M.d;
 if(M.vendor)entry.vendor=M.vendor;
 if(M.exp!==''&&M.exp!=null&&!isNaN(parseFloat(M.exp)))entry.exp=parseFloat(M.exp);
@@ -1556,7 +1556,7 @@ for(var i=0;i<4;i++){
  catch(e){s=null;await new Promise(function(x){setTimeout(x,700);});}
 }
 if(s===null){cstat("⚠️ Δεν φόρτωσε — ασταθής σύνδεση. Πάτα ↻ Φόρτωση ξανά.");return;}
-if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;subs=s.subs||[];if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);clearDirty();save();render();
+if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;subs=s.subs||[];if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;metaIn(s.meta);ensureIds();_snapBase();clearDirty();save();render();
 cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
 else{notFoundUI();}
 }
@@ -1577,6 +1577,14 @@ function notFoundUI(){
   +'</div>';
  document.body.appendChild(d);
 }
+var BASE=null;
+function newId(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function ensureIds(){try{cats.forEach(function(c){(c.log||[]).forEach(function(e){if(e&&!e.id)e.id=newId();});});(subs||[]).forEach(function(x){if(x&&!x.id)x.id='s'+Math.random().toString(36).slice(2,9);});}catch(e){}}
+function _stateObj(){return {cats:cats,pend:pend,plan:plan,CATBUD:CATBUD,wallets:wallets,transfers:transfers,income:income,INCBUD:INCBUD,subs:subs,counted:counted,close:close,budSoft:(typeof budSoft!=='undefined'?budSoft:undefined),meta:metaOut()};}
+function _snapBase(){try{BASE=JSON.parse(JSON.stringify(_stateObj()));}catch(e){BASE=null;}}
+function applyState(x){if(!x)return;cats=x.cats||cats;pend=x.pend||pend;plan=x.plan||plan;if(x.CATBUD)CATBUD=x.CATBUD;if(x.wallets)wallets=x.wallets;if(x.transfers)transfers=x.transfers;if(x.income)income=x.income;if(x.INCBUD)INCBUD=x.INCBUD;if(x.subs)subs=x.subs;if(x.counted!=null)counted=x.counted;if(x.close)close=x.close;if(typeof x.budSoft!=='undefined'&&x.budSoft!=null){try{budSoft=x.budSoft;}catch(e){}}if(x.meta)metaIn(x.meta);}
+function _idMap(st){var m={};((st&&st.cats)||[]).forEach(function(c){(c.log||[]).forEach(function(e){if(e&&e.id)m[e.id]={e:e,cat:c.n};});});return m;}
+function mergeStates(base,mine,server){if(!base||!server||!server.cats)return mine;var out=JSON.parse(JSON.stringify(server));out.cats=out.cats||[];function fc(n){for(var i=0;i<out.cats.length;i++)if(out.cats[i].n===n)return out.cats[i];var nc={n:n,log:[]};out.cats.push(nc);return nc;}function rm(id){out.cats.forEach(function(c){c.log=(c.log||[]).filter(function(e){return e.id!==id;});});}var bM=_idMap(base),mM=_idMap(mine);Object.keys(bM).forEach(function(id){if(!mM[id])rm(id);});Object.keys(mM).forEach(function(id){var mv=mM[id];var ch=!bM[id]||JSON.stringify(bM[id].e)!==JSON.stringify(mv.e);if(ch){rm(id);fc(mv.cat).log.push(JSON.parse(JSON.stringify(mv.e)));}});['pend','plan','CATBUD','wallets','transfers','income','INCBUD','counted','close','budSoft','meta'].forEach(function(k){if(JSON.stringify(base[k])!==JSON.stringify(mine[k]))out[k]=mine[k];});var bs={},ms={},ss={};(base.subs||[]).forEach(function(x){if(x&&x.id)bs[x.id]=x;});(mine.subs||[]).forEach(function(x){if(x&&x.id)ms[x.id]=x;});(server.subs||[]).forEach(function(x){if(x&&x.id)ss[x.id]=x;});var so={};Object.keys(ss).forEach(function(id){so[id]=ss[id];});Object.keys(bs).forEach(function(id){if(!ms[id])delete so[id];});Object.keys(ms).forEach(function(id){if(!bs[id]||JSON.stringify(bs[id])!==JSON.stringify(ms[id]))so[id]=ms[id];});out.subs=Object.keys(so).map(function(id){return so[id];});return out;}
 async function cloudSave(){
 if(!CLOUD.url){alert("Δεν έχει οριστεί κοινό ταμείο (CLOUD.url).");return;}
 if(!CLOUD.key){alert("Δεν έχει οριστεί δράση.");return;}
@@ -1585,7 +1593,7 @@ function _clean(k,v){return k==='_file'?undefined:v;}
 function _payload(){return JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:{cats,pend,plan,CATBUD,wallets,transfers,income,INCBUD,subs,counted,close,budSoft,meta:metaOut()}},_clean);}
 async function doSave(){
  try{
-  var r=await fetch(CLOUD.url,{method:"POST",body:_payload()});
+  var _ps=_stateObj();if(BASE){try{var _sv=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now()+Math.random()).then(function(rr){return rr.text();});var _svs=JSON.parse(_sv);if(_svs&&(_svs.cats||_svs.meta))_ps=mergeStates(BASE,_stateObj(),_svs);}catch(e){}}window.__lastMerged=_ps;var r=await fetch(CLOUD.url,{method:"POST",body:JSON.stringify({action:"save",key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,data:_ps},_clean)});
   var s=JSON.parse(await r.text());
   if(s&&s.error==="pin-required")return 'pin';
   if(s&&s.ok&&!s.ping)return 'ok';
@@ -1596,7 +1604,7 @@ try{
 let res=await doSave();
 if(res==="pin"){var pin=prompt("🔒 Χρειάζεται PIN δράσης για αλλαγές:");if(pin==null){savestat("🔒 Ακυρώθηκε — θέα μόνο.");return;}SESSION.pin=pin;try{localStorage.setItem('apolog_pin_'+CLOUD.key,pin);}catch(e){}updLock();res=await doSave();}
 var _t=0;while(res==="retry"&&_t<4){_t++;savestat("⏳ Αποθήκευση… (ξανά "+_t+")");await new Promise(function(x){setTimeout(x,700);});res=await doSave();}
-if(res==="ok"){clearDirty();savestat("✅ Αποθηκεύτηκε <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
+if(res==="ok"){try{applyState(window.__lastMerged);ensureIds();_snapBase();render();}catch(e){}clearDirty();savestat("✅ Αποθηκεύτηκε <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
 else if(res==="pin"){savestat("🔒 Λάθος PIN — δεν αποθηκεύτηκε.");}
 else{savestat("⚠️ Ασταθής σύνδεση — δεν πέρασε. Πάτα «☁ Αποθήκευση» ξανά.");}
 }catch(e){savestat("⚠️ Δεν αποθηκεύτηκε — έλεγξε σύνδεση.");}
