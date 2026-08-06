@@ -598,8 +598,9 @@ function entryRowHtml(e,ci,li,showCat,opt){
   const upd=e.unpaid?` <small style="color:var(--amber);font-weight:700">⏳ εκκρεμεί</small>`:'';
   const fnd=e.fund?` <small style="color:var(--muted)">(${e.fund})</small>`:'';
   const _amt=(opt&&opt.amt!=null)?opt.amt:(+e.a||0);
+  const revert=((SESSION.pin||SESSION.admin)&&!e.unpaid&&(+e.a||0)>0)?` <button onclick="unpayEntry(${ci},${li},event)" title="Επανέφερε σε εκκρεμές (μη πληρωμένο)" style="border:0;background:var(--amberbg);color:var(--amber);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;cursor:pointer">↩</button>`:'';
   const _tag=(opt&&opt.tag)?` <small style="color:var(--spkl)">${opt.tag}</small>`:'';
-  return `<div onclick="openEdit(${ci},${li})" style="cursor:pointer"><span>${noTag}${em}${ttl}${_tag}${catl}${upd}${fnd}${vtxt}${multi}${clip}${miss}${wch} <span style="color:var(--spkl);font-size:11px">✎</span></span><span>${eur(_amt)}</span></div>`;
+  return `<div onclick="openEdit(${ci},${li})" style="cursor:pointer"><span>${noTag}${em}${ttl}${_tag}${catl}${upd}${fnd}${vtxt}${multi}${clip}${miss}${wch}${revert} <span style="color:var(--spkl);font-size:11px">✎</span></span><span>${eur(_amt)}</span></div>`;
 }
 function renderExpByDate(box){
   var arr=[];
@@ -625,6 +626,7 @@ function renderExpByDate(box){
   h+='</div>'; d.innerHTML=h; box.appendChild(d);
 }
 function setExpView(v){expView=v;try{localStorage.setItem('apolog_expview',v);}catch(e){}render();}
+function unpayEntry(ci,li,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();if(!(SESSION.pin||SESSION.admin)){alert("Χρειάζεται PIN — ξεκλείδωσε πρώτα.");return;}var e=cats[ci]&&cats[ci].log[li];if(!e)return;snap();e.unpaid=true;e.wallet="";markDirty();render();if(CLOUD.url)cloudSave();}
 /* Ενέργειες από τον Απολογισμό (χρειάζονται PIN/admin) */
 function repUpload(ci,li){
   if(!(SESSION.pin||SESSION.admin)){alert("Χρειάζεται PIN δράσης — ξεκλείδωσε πρώτα.");return;}
