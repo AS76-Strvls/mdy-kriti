@@ -380,6 +380,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <button class="cb-skip" onclick="skipCrop()">📷 Πρωτότυπο</button>
 <button class="cb-cancel" onclick="cancelCrop()">Άκυρο</button>
 </div>
+<div class="chint" style="margin-top:9px;margin-bottom:0;opacity:.85">ℹ️ Αν και η προεπισκόπηση δείχνει χαμηλότερη ποιότητα, η φωτό αποθηκεύεται σε κανονική ποιότητα μετά το crop/στροφή.</div>
 </div>
 <div id="undoBar">Έγινε αλλαγή. <button onclick="undo()">↩ Αναίρεση</button></div>
 
@@ -1074,7 +1075,7 @@ box.innerHTML=M.parts.map((p,i)=>{
 ${M.parts.length>1?`<button class="rm" onclick="rmPart(${i})">✕</button>`:''}
 ${thumbs}</div>`;
 }).join('');
-updTotal();}
+updTotal();updSaveGuard();}
 function updTotal(){if(M&&M._alloc&&M._alloc.length)recomputeAlloc();const t=M.parts.reduce((s,p)=>s+(parseFloat(p.a)||0),0);
 document.getElementById("mTotal").textContent="Σύνολο: "+eur(t)+(M.parts.filter(p=>parseFloat(p.a)).length>1?` (${M.parts.filter(p=>parseFloat(p.a)).length} αποδείξεις)`:'');
 var mp=document.getElementById("mProvs");if(mp&&M&&M._alloc&&M._alloc.length&&mp.querySelector("input"))renderModalProvs();}
@@ -1233,7 +1234,10 @@ async function uploadPhoto(x,name){ // ανεβάζει ένα φωτό/PDF (x._
   x._failed=true;   // δεν ανέβηκε — κρατάμε το _file για να μη χαθεί / να ξαναδοκιμάσει
   return x;
 }
+function updSaveGuard(){try{var b=document.querySelector('#ov .b-save');if(!b)return;var busy=((M&&M.parts)||[]).some(function(p){return pphotos(p).some(function(x){return x._busy;});});if(busy){b.disabled=true;b.dataset.g='1';b.textContent='\u23f3 \u0391\u03bd\u03b5\u03b2\u03b1\u03af\u03bd\u03b5\u03b9 \u03c6\u03c9\u03c4\u03cc\u2026';}else if(b.dataset.g==='1'){b.disabled=false;b.dataset.g='';b.textContent='\u0391\u03c0\u03bf\u03b8\u03ae\u03ba\u03b5\u03c5\u03c3\u03b7';}}catch(e){}}
 async function saveModal(){
+if(((M&&M.parts)||[]).some(function(p){return pphotos(p).some(function(x){return x._busy;});})){alert('\u23f3 \u03a0\u03b5\u03c1\u03af\u03bc\u03b5\u03bd\u03b5 \u03bd\u03b1 \u03b1\u03bd\u03ad\u03b2\u03b5\u03b9 \u03b7 \u03c6\u03c9\u03c4\u03cc \u03c0\u03bf\u03c5 \u03b5\u03c0\u03b5\u03be\u03b5\u03c1\u03b3\u03ac\u03b6\u03b5\u03c3\u03b1\u03b9, \u03bc\u03b5\u03c4\u03ac \u03c0\u03ac\u03c4\u03b1 \u0391\u03c0\u03bf\u03b8\u03ae\u03ba\u03b5\u03c5\u03c3\u03b7.');return;}
+
 M.t=document.getElementById("mT").value.trim();
 M.vendor=document.getElementById("mVendor").value.trim();var _mpv=document.getElementById("mPayer");M.payer=_mpv?_mpv.value.trim():(M.payer||"");
 M.exp=document.getElementById("mExp").value;
