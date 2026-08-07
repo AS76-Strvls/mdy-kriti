@@ -1030,7 +1030,7 @@ function closeModal(){document.getElementById("ov").classList.remove("on");}
 function buildCatSelect(sel){const s=document.getElementById("mCat");
 s.innerHTML=cats.map((c,i)=>`<option value="${i}">${c.n}</option>`).join('')+`<option value="__new">➕ Νέα / έκτακτη κατηγορία…</option>`;
 s.value=(sel>=0?String(sel):"0");}
-function openNewExpense(){M={mode:'new',ci:-1,li:-1,d:today(),t:'',vendor:'',payer:'',exp:'',wallet:'',unpaid:true,fund:'',parts:[{a:'',note:''}],_plan:null,_plans:null,_alloc:[]};
+function openNewExpense(){M={mode:'new',ci:-1,li:-1,d:today(),t:'',vendor:'',payer:'',exp:'',wallet:'',unpaid:true,fund:'',parts:[{a:'',note:'',d:today()}],_plan:null,_plans:null,_alloc:[]};
 buildCatSelect(-1);
 document.getElementById("mTitle").textContent="Νέο έξοδο";
 document.getElementById("mDel").style.display="none";
@@ -1143,7 +1143,7 @@ function drawCrop(){var cv=document.getElementById("cropCanvas"),ctx=cv.getConte
   ctx.strokeStyle="rgba(58,125,52,.95)";ctx.lineWidth=2;ctx.beginPath();
   CROP.pts.forEach(function(p,i){var x=p.x*CROP.disp,y=p.y*CROP.disp;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();ctx.stroke();
   ctx.fillStyle="rgba(58,125,52,.12)";ctx.fill();
-  CROP.pts.forEach(function(p){var x=p.x*CROP.disp,y=p.y*CROP.disp;ctx.beginPath();ctx.arc(x,y,12,0,7);ctx.fillStyle="#fff";ctx.fill();ctx.lineWidth=3;ctx.strokeStyle="#3a7d34";ctx.stroke();});}
+  CROP.pts.forEach(function(p){var x=p.x*CROP.disp,y=p.y*CROP.disp;ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fillStyle="rgba(255,255,255,.5)";ctx.fill();ctx.lineWidth=2;ctx.strokeStyle="rgba(58,125,52,.7)";ctx.stroke();});}
 function cropPt(e){var r=document.getElementById("cropCanvas").getBoundingClientRect();return{x:(e.clientX-r.left)/CROP.disp,y:(e.clientY-r.top)/CROP.disp};}
 function cropDown(e){e.preventDefault();var q=cropPt(e),best=-1,bd=9999;CROP.pts.forEach(function(p,i){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<bd){bd=d;best=i;}});if(bd*CROP.disp<44){CROP.drag=best;try{e.target.setPointerCapture(e.pointerId);}catch(_){}}}
 function cropMove(e){if(!CROP||CROP.drag<0)return;e.preventDefault();var q=cropPt(e);CROP.pts[CROP.drag]={x:Math.max(0,Math.min(CROP.sw,q.x)),y:Math.max(0,Math.min(CROP.sh,q.y))};drawCrop();}
@@ -1189,7 +1189,7 @@ function processReceiptImage(file,cb){
     try{createImageBitmap(file,{imageOrientation:"from-image"}).then(function(bm){draw(bm,bm.width,bm.height);}).catch(fallback);}catch(e){fallback();}
   } else fallback();
 }
-function addPart(){M.parts.push({a:'',note:''});renderParts();}
+function addPart(){M.parts.push({a:'',note:'',d:today()});renderParts();}
 function rmPart(i){M.parts.splice(i,1);if(!M.parts.length)M.parts=[{a:'',note:''}];renderParts();}
 function setFree(){M.parts=[{a:'0',note:'δωρεάν'}];renderParts();}
 var _pidc=1;
@@ -1277,7 +1277,7 @@ if(_failedPh)alert("⚠ "+_failedPh+" φωτό δεν ανέβηκε (ασταθ
 const parts=M.parts.map(p=>({a:parseFloat(p.a)||0,note:(p.note||'').trim(),d:p.d||'',ph:pphotos(p).filter(x=>x.url).map(x=>({url:x.url,fname:x.fname||''}))}))
   .filter(p=>p.a||p.note||p.ph.length||p.d);
 const total=+parts.reduce((s,p)=>s+p.a,0).toFixed(2);
-var _pd='';for(var _pi3=0;_pi3<parts.length;_pi3++){if(parts[_pi3].d){_pd=parts[_pi3].d;break;}}
+var _pd='';for(var _pi3=0;_pi3<parts.length;_pi3++){if(parts[_pi3].d&&parts[_pi3].d>_pd)_pd=parts[_pi3].d;}
 if(_pd)M.d=_pd;   /* αν οι αποδείξεις έχουν ημ/νία → γίνεται η ημ/νία του εξόδου (η νωρίτερη) */
 let t=M.t||"έξοδο"; if(total===0&&!/δωρε/i.test(t)) t+=" — δωρεάν";
 const entry={t,a:total};entry.id=M.id||newId();
