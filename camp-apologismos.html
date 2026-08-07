@@ -130,14 +130,15 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
   .top{padding:16px 20px 18px}
   .top>.brand,.top>.cash,.top>.loan{max-width:960px;margin-left:auto;margin-right:auto}
   .top h1{font-size:17px}
-  .wrap{max-width:980px;column-count:2;column-gap:16px;padding:16px}
+  .wrap{max-width:980px;column-gap:16px;padding:16px}
+  #ap-overview{column-count:2;column-gap:16px}
   .card{break-inside:avoid;margin-bottom:16px}
   .ov{align-items:center}
   .sheet{border-radius:14px;max-width:600px;max-height:88vh}
   #undoBar{left:50%;transform:translateX(-50%);max-width:420px;border-radius:10px 10px 0 0}
 }
 @media(min-width:1200px){ .wrap{max-width:1400px} }
-@media(min-width:1700px){ .wrap{max-width:96vw;column-count:3} }
+@media(min-width:1700px){ .wrap{max-width:96vw} #ap-overview{column-count:3} }
 .aptabs{display:flex;gap:5px;margin:0 0 12px;flex-wrap:wrap}
 .aptab{flex:1;min-width:74px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:700;border-radius:10px;padding:10px 8px;font-size:13px;cursor:pointer}
 .aptab.on{background:var(--spk);color:#fff;border-color:var(--spk)}
