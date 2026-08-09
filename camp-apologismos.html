@@ -466,6 +466,12 @@ let income=[];      /* έσοδα ανά πηγή: {src,a,wallet,note} */
 let INCBUD={};      /* προϋπολογισμός εσόδων ανά πηγή */
 let subs=[];        /* ουρά υποβολών αποδείξεων (pending→approved) + αιτήματα επιστροφής */
 var expView=(function(){try{return localStorage.getItem('apolog_expview')||'cat';}catch(e){return 'cat';}})(); /* προβολή εξόδων: κατά κατηγορία ή ημερομηνία */
+var expFilter=(function(){try{return JSON.parse(localStorage.getItem('apolog_expfilter'))||{cat:'',flag:''};}catch(e){return {cat:'',flag:''};}})();
+function _saveFilter(){try{localStorage.setItem('apolog_expfilter',JSON.stringify(expFilter));}catch(e){}}
+function setExpFilterCat(v){expFilter.cat=v;_saveFilter();render();}
+function setExpFilterFlag(v){expFilter.flag=(expFilter.flag===v?'':v);_saveFilter();render();}
+function clearExpFilter(){expFilter={cat:'',flag:''};_saveFilter();render();}
+function expMatch(e){if(!expFilter.flag)return true;if(expFilter.flag==='norec'){var r=receiptsOf(e);return !r.files&&(+e.a>0);}if(expFilter.flag==='unpaid')return !!e.unpaid;return true;}
 var repPayChoosing=null; /* {ci,li} όταν επιλέγεις πηγή πληρωμής από τον Απολογισμό */
 const KEY="apolog_"+CLOUD.key+"_v1";
 function metaOut(){return {title:A.title,dates:A.dates,paidia:A.paidia,epiteleio:A.epiteleio,all:A.all,dikaioma:A.dikaioma,hand:A.hand,loan:A.loan,reserveLabel:A.reserveLabel,notes:A.notes||""};}
@@ -612,7 +618,7 @@ function entryRowHtml(e,ci,li,showCat,opt){
 }
 function renderExpByDate(box){
   var arr=[];
-  cats.forEach(function(c,ci){c.log.forEach(function(e,li){
+  cats.forEach(function(c,ci){if(expFilter.cat&&c.n!==expFilter.cat)return;c.log.forEach(function(e,li){if(!expMatch(e))return;
     var parts=(e.parts&&e.parts.length)?e.parts:[];
     var dated=parts.filter(function(p){return p.d;});
     if(dated.length){                                        /* έξοδο με αποδείξεις σε συγκεκριμένες ημ/νίες → κάτω από κάθε μία */
@@ -719,9 +725,21 @@ if(cats.length){var _tg=document.createElement("div");_tg.style.cssText="display
 _tg.innerHTML='<span style="font-size:12px;color:var(--muted);margin-right:2px">Προβολή:</span>'
  +'<button class="aptab'+(expView==='cat'?' on':'')+'" style="flex:0 0 auto;min-width:0;padding:6px 12px" onclick="setExpView(\'cat\')">ανά κατηγορία</button>'
  +'<button class="aptab'+(expView==='date'?' on':'')+'" style="flex:0 0 auto;min-width:0;padding:6px 12px" onclick="setExpView(\'date\')">ανά ημερομηνία</button>';
-box.appendChild(_tg);}
+box.appendChild(_tg);
+var _fr=document.createElement('div');_fr.style.cssText='display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap;align-items:center';
+var _lbl=document.createElement('span');_lbl.style.cssText='font-size:12px;color:var(--muted)';_lbl.textContent='Φίλτρο:';_fr.appendChild(_lbl);
+var _sel=document.createElement('select');_sel.style.cssText='font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fbfcf8;max-width:220px';
+var _o0=document.createElement('option');_o0.value='';_o0.textContent='Όλες οι κατηγορίες';_sel.appendChild(_o0);
+cats.forEach(function(c){var o=document.createElement('option');o.value=c.n;o.textContent=catEmoji(c.n)+' '+c.n;if(expFilter.cat===c.n)o.selected=true;_sel.appendChild(o);});
+_sel.onchange=function(){setExpFilterCat(_sel.value);};_fr.appendChild(_sel);
+function _fbtn(t,fl){var b=document.createElement('button');b.className='aptab'+(expFilter.flag===fl?' on':'');b.style.cssText='flex:0 0 auto;min-width:0;padding:6px 10px';b.textContent=t;b.onclick=function(){setExpFilterFlag(fl);};_fr.appendChild(b);}
+_fbtn('⚠ χωρίς απόδειξη','norec');_fbtn('⏳ μη πληρωμένα','unpaid');
+if(expFilter.cat||expFilter.flag){var _bc=document.createElement('button');_bc.className='aptab';_bc.style.cssText='flex:0 0 auto;padding:6px 10px;color:var(--red)';_bc.textContent='✕ καθάρισε';_bc.onclick=function(){clearExpFilter();};_fr.appendChild(_bc);}
+box.appendChild(_fr);}
 if(expView==='date'&&cats.length){ renderExpByDate(box); }
 else { cats.forEach((c,i)=>{
+if(expFilter.cat&&c.n!==expFilter.cat)return;
+if(expFilter.flag&&c.log.filter(expMatch).length===0)return;
 const sp=spentOf(c), bud=CATBUD[c.n]||0, over=bud&&sp>bud;
 const d=document.createElement("div");d.className="cat"+(c.open?" open":"");
 const perc=A.paidia?` · <span style="color:var(--muted)">${eur(sp/A.paidia)}/παιδί</span>`:'';
@@ -733,7 +751,7 @@ d.innerHTML=`<div class="hd" onclick="toggle(${i})">
 <input class="note" id="nt${i}" placeholder="τι / πού">
 <input class="eur" id="am${i}" type="number" inputmode="decimal" placeholder="€">
 <button onclick="addExp(${i})">Πρόσθεσε</button></div>
-<div class="log">${c.log.map((e,j)=>entryRowHtml(e,i,j,false)).join('')}</div>`;
+<div class="log">${c.log.map((e,j)=>expMatch(e)?entryRowHtml(e,i,j,false):'').join('')}</div>`;
 box.appendChild(d);
 }); }
 if(!cats.length)box.innerHTML='<div style="padding:6px 14px 14px;font-size:13px;color:var(--muted);line-height:1.5">'+
