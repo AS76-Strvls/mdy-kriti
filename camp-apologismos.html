@@ -340,6 +340,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <button class="b-del" id="mDel" onclick="delFromModal()" style="display:none;flex:0 0 auto;font-size:12px;padding:12px 10px">🗑 Διαγραφή</button>
 <button class="b-cancel" onclick="closeModal()">Άκυρο</button>
 <button class="b-restore" id="mRestore" onclick="restoreToPlan()" style="display:none">↩ Επόμενα</button>
+<button class="b-restore" id="mToReq" onclick="returnToRequests()" style="display:none">↩ Στα αιτήματα</button>
 <button class="b-save" onclick="saveModal()">Αποθήκευση</button>
 </div>
 </div>
@@ -1066,7 +1067,7 @@ document.getElementById("mRestore").style.display=(e._plan||e._plans)?"":"none";
 fillModal();openModal();}
 function mEnter(e){if(e&&e.key==='Enter'){e.preventDefault();saveModal();}}
 function fillDatalists(){var vs={},ps={};cats.forEach(function(c){c.log.forEach(function(e){if(e.vendor)vs[e.vendor]=1;if(e.payer)ps[e.payer]=1;});});var dv=document.getElementById("dlVendor");if(dv)dv.innerHTML=Object.keys(vs).sort().map(function(x){return '<option value="'+esc(x)+'">';}).join('');var dp=document.getElementById("dlPayer");if(dp)dp.innerHTML=Object.keys(ps).sort().map(function(x){return '<option value="'+esc(x)+'">';}).join('');}
-function fillModal(){fillDatalists();document.getElementById("mT").value=M.t;document.getElementById("mVendor").value=M.vendor;var _mp=document.getElementById("mPayer");if(_mp)_mp.value=M.payer||"";var _me=document.getElementById("mEnteredBy");if(_me)_me.value=M.enteredBy||"";
+function fillModal(){fillDatalists();var _tr=document.getElementById("mToReq");if(_tr)_tr.style.display=(M&&M.mode==='edit')?'':'none';document.getElementById("mT").value=M.t;document.getElementById("mVendor").value=M.vendor;var _mp=document.getElementById("mPayer");if(_mp)_mp.value=M.payer||"";var _me=document.getElementById("mEnteredBy");if(_me)_me.value=M.enteredBy||"";
 document.getElementById("mExp").value=M.exp;document.getElementById("mDate").value=M.d||today();
 var ws=document.getElementById("mWallet");
 ws.innerHTML='<option value="__pending">⏳ Εκκρεμεί — δεν πληρώθηκε ακόμα</option><option value="">✔ Πληρώθηκε — κοινό ταμείο</option>'+wallets.map(function(w){return '<option value="'+w.id+'">✔ '+(w.cash?'💵 ':'🏦 ')+w.name+'</option>';}).join('');
@@ -1327,6 +1328,7 @@ const e=cats[M.ci].log[M.li]; cats[M.ci].log.splice(M.li,1);
 const back=e._plans||(e._plan?[e._plan]:[]);
 if(back.length&&confirm("Να επιστρέψει στα «Επόμενα» για να το ξαναπεράσεις;"))back.forEach(pp=>plan.push(pp));
 markDirty(); closeModal(); render();}
+function returnToRequests(){var e=cats[M.ci]&&cats[M.ci].log[M.li];if(!e)return;if(!confirm("↩ Επιστροφή στα αιτήματα;\n\nΤο έξοδο φεύγει από τα Έξοδα και μπαίνει «προς έγκριση» (αναστρέψιμο)."))return;snap();var url='',fname='';(e.parts||[]).forEach(function(p){(p.ph||[]).forEach(function(x){if(x&&x.url&&!url){url=x.url;fname=x.fname||'';}});});var sub={id:'s'+Math.random().toString(36).slice(2,9),exp:(e.vendor||e.t||'έξοδο'),amount:(+e.a||0),note:e.t||'',submitter:e.payer||'',d:isoOf(e)||'',status:'pending',reimburse:true,url:url,fname:fname,ts:today()};subs.push(sub);cats[M.ci].log.splice(M.li,1);markDirty();closeModal();render();if(CLOUD.url&&(SESSION.pin||SESSION.admin))cloudSave();}
 function restoreToPlan(){snap();
 const e=cats[M.ci].log[M.li]; cats[M.ci].log.splice(M.li,1);
 const back=e._plans||(e._plan?[e._plan]:[]); back.forEach(pp=>plan.push(pp));
