@@ -337,9 +337,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Robot
 <input id="mFund" placeholder="Πηγή χρημάτων — μόνο σε εξαίρεση (π.χ. προσωπικά → επεστράφη)" style="margin-top:7px">
 <div id="mTotal" style="margin-top:11px;font-weight:800;color:var(--spkd)"></div>
 <div class="acts">
+<button class="b-del" id="mDel" onclick="delFromModal()" style="display:none;flex:0 0 auto;font-size:12px;padding:12px 10px">🗑 Διαγραφή</button>
 <button class="b-cancel" onclick="closeModal()">Άκυρο</button>
 <button class="b-restore" id="mRestore" onclick="restoreToPlan()" style="display:none">↩ Επόμενα</button>
-<button class="b-del" id="mDel" onclick="delFromModal()" style="display:none">Διαγραφή</button>
 <button class="b-save" onclick="saveModal()">Αποθήκευση</button>
 </div>
 </div>
@@ -1114,7 +1114,7 @@ function partAddPhoto(i,file){ if(!file)return;
   rd.onerror=function(){ done(null); };
   rd.readAsDataURL(file);
 }
-function partRmPhoto(i,k){ var arr=pphotos(M.parts[i]); if(k>=0&&k<arr.length)arr.splice(k,1); renderParts(); }
+function partRmPhoto(i,k){ if(!confirm("Αφαίρεση αυτής της φωτό;"))return; var arr=pphotos(M.parts[i]); if(k>=0&&k<arr.length)arr.splice(k,1); renderParts(); }
 function b64ToBlob(b64,type){var bin=atob(String(b64||'').replace(/\s/g,''));var len=bin.length,arr=new Uint8Array(len);for(var i=0;i<len;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:type||'image/jpeg'});}
 async function editPhoto(i,k){
   if(!(SESSION.pin||SESSION.admin)){alert("Χρειάζεται PIN — ξεκλείδωσε πρώτα.");return;}
@@ -1210,7 +1210,7 @@ function processReceiptImage(file,cb){
   } else fallback();
 }
 function addPart(){M.parts.push({a:'',note:'',d:today()});renderParts();}
-function rmPart(i){M.parts.splice(i,1);if(!M.parts.length)M.parts=[{a:'',note:''}];renderParts();}
+function rmPart(i){if(!confirm("Αφαίρεση αυτής της γραμμής απόδειξης;"))return;M.parts.splice(i,1);if(!M.parts.length)M.parts=[{a:'',note:''}];renderParts();}
 function setFree(){M.parts=[{a:'0',note:'δωρεάν'}];renderParts();}
 var _pidc=1;
 function ensurePids(){plan.forEach(function(p){if(!p.pid)p.pid='pv'+(_pidc++);});}
@@ -1322,7 +1322,7 @@ var _lk=(entry.id?subs.filter(function(x){return x.entryId===entry.id;}):[])[0];
 cats[ci].open=true; markDirty(); closeModal(); render();
 if(CLOUD.url&&(SESSION.pin||SESSION.admin)){cloudSave();}
 }
-function delFromModal(){if(!confirm("Διαγραφή αυτού του εξόδου;"))return; snap();
+function delFromModal(){var _de=cats[M.ci]&&cats[M.ci].log[M.li];var _dn=_de?((_de.vendor||_de.t||'έξοδο')+' — '+eur(+_de.a||0)):'έξοδο';if(!confirm("⚠ Οριστική διαγραφή εξόδου:\n\n"+_dn+"\n\nΣίγουρα;"))return; snap();
 const e=cats[M.ci].log[M.li]; cats[M.ci].log.splice(M.li,1);
 const back=e._plans||(e._plan?[e._plan]:[]);
 if(back.length&&confirm("Να επιστρέψει στα «Επόμενα» για να το ξαναπεράσεις;"))back.forEach(pp=>plan.push(pp));
