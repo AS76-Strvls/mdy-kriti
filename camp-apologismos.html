@@ -834,25 +834,26 @@ async function doSubmitReceipt(){
  }catch(e){msg.innerHTML='<span style="color:var(--red)">⚠ Δεν στάλθηκε — έλεγξε σύνδεση.</span>';}
 }
 var payChoosing=null;
-function subActive(){return subs.filter(function(s){var st=s.status||'pending';return st==='pending'||(st==='approved'&&s.reimburse&&!s.paid);});}
+function subEntry(s){if(!s||!s.entryId)return null;for(var i=0;i<cats.length;i++){var lg=cats[i].log||[];for(var j=0;j<lg.length;j++){if(lg[j]&&lg[j].id===s.entryId)return lg[j];}}return null;}
+function subActive(){return subs.filter(function(s){var st=s.status||'pending';var _le=subEntry(s);var _pd=_le?(!_le.unpaid):(!!s.paid);return st==='pending'||(st==='approved'&&s.reimburse&&!_pd);});}
 function subDone(){var a=subActive();return subs.filter(function(s){return a.indexOf(s)<0;});}
 function subPending(){return subs.filter(function(x){return (x.status||'pending')==='pending';});}
 function subOwed(){return subs.filter(function(x){return x.reimburse&&x.status==='approved'&&!x.paid;});}
 function subRow(s){
- var idx=subs.indexOf(s),st=s.status||'pending',canEd=!!(SESSION.pin||SESSION.admin);
+ var idx=subs.indexOf(s),st=s.status||'pending',canEd=!!(SESSION.pin||SESSION.admin);var _le=subEntry(s);var _amt=_le?(+_le.a||0):(+s.amount||0);var _nm=_le?(_le.vendor||_le.t||s.exp||'(έξοδο)'):(s.exp||'(έξοδο)');var _pd=_le?(!_le.unpaid):(!!s.paid);var _pf=_le?(_le.wallet&&typeof walletName==='function'?walletName(_le.wallet):(_le.unpaid?'':'Κοινό ταμείο')):(s.paidFrom||'');
  var badge=st==='approved'?'<span style="color:#2f7d32">✓ εγκρίθηκε</span>':(st==='rejected'?'<span style="color:var(--red)">✕ απορρίφθηκε</span>':'<span style="color:var(--amber)">⏳ προς έγκριση</span>');
  var isImg=/^data:image/i.test(s.url||'')&&!/pdf/i.test(s.fname||'');
  var thumb=s.url?(isImg?'<a href="'+s.url+'" target="_blank"><img src="'+s.url+'" style="height:44px;width:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)"></a>':'<a href="'+s.url+'" target="_blank" title="άνοιξε απόδειξη" style="font-size:22px;text-decoration:none">📎</a>'):'<span title="χωρίς φωτό" style="font-size:18px">📷✗</span>';
- var reimb=s.reimburse?(' · <b style="color:'+(s.paid?'#2f7d32':'var(--amber)')+'">💶 επιστροφή '+(s.paid?('✓ πληρώθηκε'+(s.paidFrom?' ('+esc(s.paidFrom)+')':'')):'εκκρεμεί')+'</b>'):'';
+ var reimb=s.reimburse?(' · <b style="color:'+(_pd?'#2f7d32':'var(--amber)')+'">💶 επιστροφή '+(_pd?('✓ πληρώθηκε'+(_pf?' ('+esc(_pf)+')':'')):'εκκρεμεί')+'</b>'):'';
  var h='<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">';
  h+='<div style="flex:0 0 auto">'+thumb+'</div>';
- h+='<div style="flex:1;min-width:0;font-size:12.5px"><b>'+esc(s.exp||'(έξοδο)')+'</b> '+(s.amount?'<b>'+eur(s.amount)+'</b>':'')+'<div style="color:var(--muted);overflow-wrap:anywhere">από '+esc(s.submitter||'—')+' · '+badge+reimb+(s.note?' · '+esc(s.note):'')+'</div>';
+ h+='<div style="flex:1;min-width:0;font-size:12.5px"><b>'+esc(_nm)+'</b> '+(_amt?'<b>'+eur(_amt)+'</b>':'')+'<div style="color:var(--muted);overflow-wrap:anywhere">από '+esc(s.submitter||'—')+' · '+badge+reimb+(s.note?' · '+esc(s.note):'')+'</div>';
  if(canEd&&payChoosing===s.id){
   h+='<div style="margin-top:5px;font-size:12px;color:var(--spkd)">Από πού πληρώθηκε; '+wallets.map(function(w){return '<button class="pbuy" style="padding:4px 9px;margin:3px 4px 0 0" onclick="markPaidFrom('+idx+',\''+w.id+'\')">'+(w.cash?'💵':'🏦')+' '+esc(w.name)+'</button>';}).join('')+'<button class="pbuy" style="padding:4px 9px;margin:3px 4px 0 0" onclick="markPaidFrom('+idx+',\'\')">💵 Κοινό ταμείο</button><button class="pbuy" style="padding:4px 8px;color:var(--muted)" onclick="cancelPay()">✕</button></div>';}
  h+='</div>';
  if(canEd&&payChoosing!==s.id){h+='<div style="flex:0 0 auto;display:flex;flex-direction:column;gap:4px">';
   if(st==='pending'){h+='<button class="pbuy" style="padding:5px 9px" onclick="approveSub('+idx+')">✓ Έγκριση</button><button class="pbuy" style="padding:5px 9px;color:var(--red)" onclick="rejectSub('+idx+')">✕ Απόρ.</button>';}
-  if(s.reimburse&&st==='approved'&&!s.paid){h+='<button class="pbuy" style="padding:5px 9px" onclick="markPaid('+idx+')">💶 Πληρώθηκε</button>';}
+  if(s.reimburse&&st==='approved'&&!_pd){h+='<button class="pbuy" style="padding:5px 9px" onclick="markPaid('+idx+')">💶 Πληρώθηκε</button>';}
   if(st==='rejected'){h+='<button class="pbuy" style="padding:5px 9px" onclick="unrejectSub('+idx+')">↺</button>';}
   h+='</div>';}
  return h+'</div>';
@@ -880,10 +881,10 @@ function approveSub(i){var s=subs[i];if(!s)return;if(needPin())return;
  document.getElementById("mDel").style.display="none";
  document.getElementById("mRestore").style.display="none";
  fillModal();openModal();}
-function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("Απόρριψη αυτής της υποβολής;"))return;snap();s.status='rejected';markDirty();render();}
+function rejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;if(!confirm("✕ Απόρριψη υποβολής:\n\n"+(s.exp||'')+(s.amount?' — '+eur(+s.amount||0):'')+"\n\n(αναστρέψιμο με ↺) — σίγουρα;"))return;snap();s.status='rejected';markDirty();render();}
 function unrejectSub(i){var s=subs[i];if(!s)return;if(needPin())return;s.status='pending';markDirty();render();}
 function markPaid(i){var s=subs[i];if(!s)return;if(needPin())return;payChoosing=s.id;render();}
-function markPaidFrom(i,wid){var s=subs[i];if(!s)return;if(needPin())return;snap();s.paid=true;s.paidTs=today();s.paidFrom=(wid?walletName(wid):'Κοινό ταμείο');payChoosing=null;markDirty();render();}
+function markPaidFrom(i,wid){var s=subs[i];if(!s)return;if(needPin())return;snap();var _le=subEntry(s);if(_le){_le.unpaid=false;_le.wallet=wid||'';}s.paid=true;s.paidTs=today();s.paidFrom=(wid?walletName(wid):'Κοινό ταμείο');payChoosing=null;markDirty();render();if(CLOUD.url&&(SESSION.pin||SESSION.admin))cloudSave();}
 function cancelPay(){payChoosing=null;render();}
 function incTotal(){return Math.round(income.reduce(function(s,x){return s+(+x.a||0);},0)*100)/100;}
 function incBudTotal(){return Math.round(Object.keys(INCBUD).reduce(function(s,k){return s+(+INCBUD[k]||0);},0)*100)/100;}
