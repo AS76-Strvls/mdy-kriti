@@ -1824,8 +1824,54 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
  copyReceipts = window.copyReceipts = function(){
    var g=newRec();
    var tsv=g.map(function(r){return r.map(function(c){return String(c==null?'':c);}).join('\t');}).join('\n');
-   copyText(tsv, 'BUDGET-RECEIPTS αντιγράφηκε — επικόλλησε στο κελί A1. Φωτό στη στήλη F (=IMAGE).');
+   copyText(tsv, 'BUDGET-RECEIPTS αντιγράφηκε — επικόλλησε στο κελί A1. Φωτό: κατέβασε το ZIP «📁 Φάκελος αποδείξεων» (αριθμημένες, ίδιο Α/Α).');
  };
+ /* ---- Φάκελος αποδείξεων: ZIP με αριθμημένα ονόματα + αριθμό πάνω στη φωτό ---- */
+ function receiptList(){
+   var T=tpl(), byE=subUrlByEntry(), out=[], no=0, sfx='αβγδεζηθ';
+   (cats||[]).forEach(function(c){ (c.log||[]).forEach(function(e){
+     var parts=(e.parts&&e.parts.length)?e.parts:[{a:e.a,note:''}];
+     parts.forEach(function(p,pi){ no++;
+       var urls=phUrls(p);
+       if(pi===0 && !urls.length && byE[e.id]) urls=[byE[e.id]];
+       urls.forEach(function(u,k){
+         var pad=('0'+no).slice(-2);
+         var tag=(k===0?String(no):(String(no)+(sfx[k-1]||('_'+(k+1)))));
+         var fpad=(k===0?pad:(pad+(sfx[k-1]||('_'+(k+1)))));
+         var vend=String(e.vendor||e.t||p.note||'').replace(/[\\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim().slice(0,40);
+         out.push({tag:tag, url:u, file:[fpad, bucket(c.n,T), vend, f2(p.a)+'€'].join('_')});
+       });
+     });
+   });});
+   return out;
+ }
+ function ensureJSZip(){ return new Promise(function(res,rej){ if(window.JSZip)return res(); var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; s.onload=function(){res();}; s.onerror=function(){rej(new Error('jszip'));}; document.head.appendChild(s); }); }
+ async function fetchB64(url){ for(var i=0;i<3;i++){ try{ var r=await fetch(CLOUD.url,{method:'POST',body:JSON.stringify({action:'getReceipt',key:CLOUD.key,url:url})}); var s=JSON.parse(await r.text()); if(s&&s.ok&&s.data) return s; }catch(e){} await new Promise(function(x){setTimeout(x,700);}); } return null; }
+ function loadImg(b64,type){ return new Promise(function(res,rej){ var im=new Image(); im.onload=function(){res(im);}; im.onerror=function(){rej(new Error('img'));}; im.src='data:'+(type||'image/jpeg')+';base64,'+b64; }); }
+ function stampImg(img,tag){ var w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; var MAX=1600, s=Math.min(1,MAX/Math.max(w,h)); w=Math.max(1,Math.round(w*s)); h=Math.max(1,Math.round(h*s)); var c=document.createElement('canvas'); c.width=w; c.height=h; var x=c.getContext('2d'); x.drawImage(img,0,0,w,h); var m=Math.round(Math.max(w,h)*0.012)+4; var fs=Math.round(Math.max(w,h)*0.05); if(fs<22)fs=22; x.font='bold '+fs+'px Arial'; var txt='#'+tag; var tw=x.measureText(txt).width; var bw=tw+m*2, bh=fs+m*1.1; x.fillStyle='rgba(178,59,59,0.93)'; x.fillRect(m,m,bw,bh); x.fillStyle='#fff'; x.textBaseline='top'; x.fillText(txt, m+m, m+m*0.35); return c.toDataURL('image/jpeg',0.9).replace(/^data:[^,]*,/,''); }
+ async function genZip(){
+   if(!CLOUD.url){alert('Χρειάζεται σύνδεση για να κατέβουν οι φωτό.');return;}
+   var list=receiptList();
+   if(!list.length){alert('Δεν βρέθηκαν συνδεδεμένες φωτό αποδείξεων.');return;}
+   var btn=document.getElementById('genZipBtn'); var old=btn?btn.textContent:'';
+   try{ await ensureJSZip(); }catch(e){ if(btn)btn.textContent=old; alert('Δεν φόρτωσε το εργαλείο ZIP (έλεγξε σύνδεση).'); return; }
+   var zip=new JSZip(), okc=0, failc=0;
+   for(var i=0;i<list.length;i++){ var it=list[i]; if(btn)btn.textContent='⏳ '+(i+1)+'/'+list.length+'…';
+     var s=await fetchB64(it.url); if(!s||!s.data){ failc++; continue; }
+     var isPdf=/pdf/i.test(s.type||'')||/\.pdf$/i.test(s.name||'');
+     var fn=String(it.file).replace(/[\\\/:*?"<>|]+/g,'-');
+     try{ if(isPdf){ zip.file(fn+'.pdf', s.data, {base64:true}); okc++; }
+       else { var im=await loadImg(s.data,s.type); zip.file(fn+'.jpg', stampImg(im,it.tag), {base64:true}); okc++; } }
+     catch(e){ try{ zip.file(fn+(isPdf?'.pdf':'.jpg'), s.data, {base64:true}); okc++; }catch(_){ failc++; } }
+   }
+   if(btn)btn.textContent='📦 Συμπίεση…';
+   var blob=await zip.generateAsync({type:'blob'});
+   var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download='Αποδείξεις_'+(CLOUD.key||'δράση')+'.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},2000);
+   if(btn)btn.textContent=old;
+   alert('✅ Έτοιμο: '+okc+' αποδείξεις στο ZIP'+(failc?(' · '+failc+' δεν κατέβηκαν (ασταθής σύνδεση — ξαναπάτα)'):'')+'.\nΑριθμός στο όνομα ΚΑΙ πάνω στη φωτό — ίδιο με το Α/Α του φύλλου.');
+ }
+ window.genReceiptsZip=genZip;
+ (function injectBtn(){ try{ var host=document.getElementById('ap-report'); if(!host)return; var bs=host.querySelectorAll('button'); for(var i=0;i<bs.length;i++){ if(/copyReceipts/.test(bs[i].getAttribute('onclick')||'')){ if(document.getElementById('genZipBtn'))return; var b=document.createElement('button'); b.id='genZipBtn'; b.type='button'; b.textContent='📁 Φάκελος αποδείξεων (ZIP)'; b.style.cssText='border:0;border-radius:9px;padding:10px 12px;font-weight:700;background:#5f8535;color:#fff'; b.onclick=genZip; bs[i].parentNode.insertBefore(b, bs[i].nextSibling); return; } } }catch(e){} })();
 })();
 /*OVR76-END*/
 </script>
