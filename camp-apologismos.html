@@ -1745,7 +1745,7 @@ async function resetPin(key){var pin=(document.getElementById("homeAdmin").value
 if(!CLOUD.key){showHome();}
 else if(CLOUD.url){document.getElementById("cloudCard").style.display="";updLock();cloudLoad();}
 function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStorage.removeItem(KEY);}catch(e){}location.reload();}}
-  /*OVR76-START*/
+ /*OVR76-START*/
 ;(function(){
  function f2(x){return (Math.round((+x||0)*100)/100).toFixed(2);}
  function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zα-ω0-9]+/gi,' ').trim();}
@@ -1794,21 +1794,27 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
   return grid;
  }
  function drvId(u){ var m=String(u||'').match(/[-\w]{25,}/); return m?m[0]:''; }
- function subUrlByEntry(){ var m={}; (typeof subs!=='undefined'?subs:[]).forEach(function(s){ if(s&&s.url&&s.entryId) m[s.entryId]=s.url; }); return m; }
+ function imgF(id){ return '=IMAGE("https://drive.google.com/thumbnail?id='+id+'&sz=w1000")'; }
+ function viewL(id){ return 'https://drive.google.com/file/d/'+id+'/view'; }
+ function phUrls(p){ var out=[]; ((p&&p.ph)?p.ph:[]).forEach(function(x){ if(x&&x.url) out.push(x.url); }); return out; }
+ function subUrlByEntry(){ var m={}; (typeof subs!=='undefined'?subs:[]).forEach(function(s){ if(s&&s.url&&s.entryId&&!m[s.entryId]) m[s.entryId]=s.url; }); return m; }
  function newRec(){
   var T=tpl(); var byE=subUrlByEntry();
   var grid=[];
   grid.push(['']);
   grid.push(['','ΑΠΟΔΕΙΞΕΙΣ']);
   grid.push(['','Αρ. Απόδειξης','Κατηγορία Εξόδου','Προμηθευτής','Ποσό','Φωτό απόδειξης','Σύνδεσμος']);
-  var no=0;
+  var no=0, sfx='αβγδεζηθ';
   (cats||[]).forEach(function(c){ (c.log||[]).forEach(function(e){
-     var url=byE[e.id]||''; var id=drvId(url);
-     var img=id?('=IMAGE("https://drive.google.com/thumbnail?id='+id+'&sz=w1000")'):'';
-     var link=id?('https://drive.google.com/file/d/'+id+'/view'):'';
      var parts=(e.parts&&e.parts.length)?e.parts:[{a:e.a,note:''}];
      parts.forEach(function(p,pi){ no++;
-       grid.push(['', no, bucket(c.n,T), (e.vendor||e.t||p.note||''), f2(p.a), (pi===0?img:''), (pi===0?link:'')]);
+       var urls=phUrls(p);
+       if(pi===0 && !urls.length && byE[e.id]) urls=[byE[e.id]];
+       var id0=urls.length?drvId(urls[0]):'';
+       grid.push(['', no, bucket(c.n,T), (e.vendor||e.t||p.note||''), f2(p.a), id0?imgF(id0):'', id0?viewL(id0):'']);
+       for(var k=1;k<urls.length;k++){ var idk=drvId(urls[k]); if(!idk)continue;
+         grid.push(['', String(no)+(sfx[k-1]||('#'+(k+1))), '', '', '', imgF(idk), viewL(idk)]);
+       }
      });
   }); });
   grid.push(['','','','ΣΥΝΟΛΟ', f2(tot().spent)]);
