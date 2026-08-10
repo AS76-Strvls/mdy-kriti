@@ -1745,6 +1745,83 @@ async function resetPin(key){var pin=(document.getElementById("homeAdmin").value
 if(!CLOUD.key){showHome();}
 else if(CLOUD.url){document.getElementById("cloudCard").style.display="";updLock();cloudLoad();}
 function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStorage.removeItem(KEY);}catch(e){}location.reload();}}
+  /*OVR76-START*/
+;(function(){
+ function f2(x){return (Math.round((+x||0)*100)/100).toFixed(2);}
+ function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zα-ω0-9]+/gi,' ').trim();}
+ function campOP(){try{return /op/i.test((CLOUD&&CLOUD.key)||'');}catch(e){return false;}}
+ var EXP_OP=['Διατροφή','Διαμονή','Μεταφορικά','Υλικά Προγράμματος','Επισκευές','Υλικά Φαρμακείου','Αναμνηστικά','Δημόσιες Σχέσεις κ.ά.','Απρόβλεπτα','Άλλο','Μεταφορές - Καύσιμα'];
+ var EXP_MDY=['Διατροφή','Διαμονή','Αεροπορικά + Λεωφορεία Κύπρου','Μεταφορικά','Υλικά Προγράμματος','Υλικά Φαρμακείου','Αναμνηστικά','Δημόσιες Σχέσεις κ.ά.','Απρόβλεπτα','Φαράγγι Σαμαριάς','Τουρ 23/07/2026','Τουρ 24/07/2026','Είσοδος Μονή Αρκαδίου','Είσοδος Μουσείο Ελεύθερνας','Είσοδος Σπηλιά Μελιδόνι','Εργαστήρι Μαχαιροποιίας'];
+ function tpl(){ if(campOP()) return {exp:EXP_OP, totRow:27, ypRow:28, catchAll:'Άλλο'}; return {exp:EXP_MDY, totRow:30, ypRow:31, catchAll:'Απρόβλεπτα'}; }
+ function has(T,name){ for(var i=0;i<T.exp.length;i++) if(T.exp[i]===name) return name; return null; }
+ function bucket(name,T){
+   var n=norm(name), i;
+   for(i=0;i<T.exp.length;i++) if(n===norm(T.exp[i])) return T.exp[i];
+   for(i=0;i<T.exp.length;i++){var tn=norm(T.exp[i]); if(tn&&(tn.indexOf(n)===0||n.indexOf(tn)===0)) return T.exp[i];}
+   var cand=null;
+   if(/διατροφ|σουπερ|φαγητ/.test(n))cand='Διατροφή';
+   else if(/καυσιμ|βενζιν|πετρελαι/.test(n))cand='Μεταφορές - Καύσιμα';
+   else if(/μεταφορ|λεωφορ|αεροπορ|πλοι|μετακιν|ταξι/.test(n))cand='Μεταφορικά';
+   else if(/αναμνηστ/.test(n))cand='Αναμνηστικά';
+   else if(/φαρμακ/.test(n))cand='Υλικά Φαρμακείου';
+   else if(/διαμον|καταλυμ|ξενοδοχ/.test(n))cand='Διαμονή';
+   else if(/δημοσι|σχεσ/.test(n))cand='Δημόσιες Σχέσεις κ.ά.';
+   else if(/υλικ|εξοπλ/.test(n))cand='Υλικά Προγράμματος';
+   return (cand&&has(T,cand))||T.catchAll;
+ }
+ function newSyn(){
+  var T=tpl();
+  var grid=[]; function set(r,c,v){ while(grid.length<r) grid.push([]); var row=grid[r-1]; while(row.length<c) row.push(''); row[c-1]=(v==null?'':v); }
+  set(2,2,'ΟΙΚΟΝΟΜΙΚΟΣ ΑΠΟΛΟΓΙΣΜΟΣ');
+  set(4,2,'Δικαίωμα Συμμετοχής:'); set(4,3,(+A.dikaioma||0));
+  set(5,2,'Συμμετείχαν');
+  set(6,2,'Παιδιά:'); set(6,3,A.paidia);
+  set(7,2,'Επιτελείο:'); set(7,3,A.epiteleio);
+  set(8,2,'Γονείς  & Φίλοι:'); set(8,3,0);
+  set(9,2,'Σύνολο:'); set(9,3,(+A.paidia||0)+(+A.epiteleio||0));
+  set(11,2,'Έσοδα'); set(11,6,'Έξοδα');
+  set(13,2,'Α/Α'); set(13,3,'Περιγραφή Εσόδων'); set(13,4,'Ποσό (€)');
+  set(13,6,'Α/Α'); set(13,7,'Περιγραφή Εξόδων'); set(13,8,'Ποσό (€)');
+  var incT=0;
+  (income||[]).forEach(function(x,i){ var r=14+i; set(r,2,i+1); set(r,3,(x.src||'')); set(r,4,f2(x.a)); incT+=(+x.a||0); });
+  var byB={}; T.exp.forEach(function(m){byB[m]=0;});
+  (cats||[]).forEach(function(c){ var b=bucket(c.n,T); byB[b]=(byB[b]||0)+(+spentOf(c)||0); });
+  T.exp.forEach(function(m,i){ var r=14+i; set(r,6,i+1); set(r,7,m); set(r,8,f2(byB[m]||0)); });
+  var t=tot();
+  set(T.totRow,3,'Σύνολο Εσόδων'); set(T.totRow,4,f2(incT));
+  set(T.totRow,7,'Σύνολο Εξόδων'); set(T.totRow,8,f2(t.spent));
+  set(T.ypRow,7,'Υπόλοιπο'); set(T.ypRow,8,f2(t.left));
+  return grid;
+ }
+ function drvId(u){ var m=String(u||'').match(/[-\w]{25,}/); return m?m[0]:''; }
+ function subUrlByEntry(){ var m={}; (typeof subs!=='undefined'?subs:[]).forEach(function(s){ if(s&&s.url&&s.entryId) m[s.entryId]=s.url; }); return m; }
+ function newRec(){
+  var T=tpl(); var byE=subUrlByEntry();
+  var grid=[];
+  grid.push(['']);
+  grid.push(['','ΑΠΟΔΕΙΞΕΙΣ']);
+  grid.push(['','Αρ. Απόδειξης','Κατηγορία Εξόδου','Προμηθευτής','Ποσό','Φωτό απόδειξης','Σύνδεσμος']);
+  var no=0;
+  (cats||[]).forEach(function(c){ (c.log||[]).forEach(function(e){
+     var url=byE[e.id]||''; var id=drvId(url);
+     var img=id?('=IMAGE("https://drive.google.com/thumbnail?id='+id+'&sz=w1000")'):'';
+     var link=id?('https://drive.google.com/file/d/'+id+'/view'):'';
+     var parts=(e.parts&&e.parts.length)?e.parts:[{a:e.a,note:''}];
+     parts.forEach(function(p,pi){ no++;
+       grid.push(['', no, bucket(c.n,T), (e.vendor||e.t||p.note||''), f2(p.a), (pi===0?img:''), (pi===0?link:'')]);
+     });
+  }); });
+  grid.push(['','','','ΣΥΝΟΛΟ', f2(tot().spent)]);
+  return grid;
+ }
+ copySynopsi = window.copySynopsi = function(){ clipWrite(newSyn(), 'APOLOGISMOS-SYNOPSI αντιγράφηκε — επικόλλησε στο κελί A1 του φύλλου.'); };
+ copyReceipts = window.copyReceipts = function(){
+   var g=newRec();
+   var tsv=g.map(function(r){return r.map(function(c){return String(c==null?'':c);}).join('\t');}).join('\n');
+   copyText(tsv, 'BUDGET-RECEIPTS αντιγράφηκε — επικόλλησε στο κελί A1. Φωτό στη στήλη F (=IMAGE).');
+ };
+})();
+/*OVR76-END*/
 </script>
 </body>
 </html>
