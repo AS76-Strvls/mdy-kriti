@@ -1532,7 +1532,9 @@ function masterCat(n){var s=String(n||"");
  if(/έκτακτ|απρόβλ/i.test(s))return "Απρόβλεπτα";
  return s;}
 var MASTER_ORDER=["Διατροφή","Διαμονή","Αεροπορικά + Λεωφορεία Κύπρου","Μεταφορικά","Υλικά Προγράμματος","Υλικά Φαρμακείου","Αναμνηστικά","Δημόσιες Σχέσεις κ.ά.","Απρόβλεπτα","Δραστηριότητες / Είσοδοι","Καύσιμα"];
-function copySynopsi(){
+function masterCatOP(n){var s=String(n||'').trim();if(/δημόσι|σχέσε/i.test(s))return 'Δημόσιες Σχέσεις κ.ά.';if(/καύσιμ/i.test(s))return 'Μεταφορές - Καύσιμα';var OK=['Διατροφή','Διαμονή','Μεταφορικά','Υλικά Προγράμματος','Επισκευές','Υλικά Φαρμακείου','Αναμνηστικά','Απρόβλεπτα','Άλλο'];for(var i=0;i<OK.length;i++)if(s===OK[i])return OK[i];return 'Άλλο';}
+function copyOPSheet(){var t=tot();var pa=+A.paidia||0,ep=+A.epiteleio||0;var ORDER=['Διατροφή','Διαμονή','Μεταφορικά','Υλικά Προγράμματος','Επισκευές','Υλικά Φαρμακείου','Αναμνηστικά','Δημόσιες Σχέσεις κ.ά.','Απρόβλεπτα','Άλλο','Μεταφορές - Καύσιμα'];var byM={};ORDER.forEach(function(m){byM[m]=0;});cats.forEach(function(c){var m=masterCatOP(c.n);if(byM[m]==null)byM[m]=0;byM[m]+=spentOf(c);});var incRows=(income||[]).filter(function(x){return (x.src||'')||(+x.a||0);}).map(function(x){return [x.src||'',(+x.a||0)];});var totInc=(income||[]).reduce(function(a,x){return a+(+x.a||0);},0);var G=[];for(var i=0;i<28;i++)G.push(['','','','','','','','']);function set(r,cl,v){G[r-1][cl.charCodeAt(0)-65]=v;}set(2,'B','ΟΙΚΟΝΟΜΙΚΟΣ ΑΠΟΛΟΓΙΣΜΟΣ');set(4,'B','Δικαίωμα Συμμετοχής:');set(4,'C',(+A.dikaioma||0));set(5,'B','Συμμετείχαν');set(6,'B','Παιδιά:');set(6,'C',pa);set(7,'B','Επιτελείο:');set(7,'C',ep);set(8,'B','Γονείς & Φίλοι:');set(8,'C',0);set(9,'B','Σύνολο:');set(9,'C',pa+ep);set(11,'B','Έσοδα');set(11,'F','Έξοδα');set(13,'B','Α/Α');set(13,'C','Περιγραφή Εσόδων');set(13,'D','Ποσό (€)');set(13,'F','Α/Α');set(13,'G','Περιγραφή');set(13,'H','Ποσό (€)');incRows.forEach(function(p,idx){var r=14+idx;if(r>26)return;set(r,'B',idx+1);set(r,'C',p[0]);set(r,'D',(+p[1]||0).toFixed(2));});ORDER.forEach(function(m,idx){var r=14+idx;set(r,'F',idx+1);set(r,'G',m);set(r,'H',(Math.round((byM[m]||0)*100)/100).toFixed(2));});set(27,'C','Σύνολο Εσόδων');set(27,'D',totInc.toFixed(2));set(27,'G','Σύνολο Εξόδων');set(27,'H',t.spent.toFixed(2));set(28,'G','Υπόλοιπο');set(28,'H',t.left.toFixed(2));clipWrite(G,'ΣΥΝΟΨΗ ΟΠ αντιγράφηκε — κάνε paste στο κελί A1 (γεμίζει όλο το φύλλο).');}
+function copySynopsi(){if(/op/i.test(CLOUD.key||'')){return copyOPSheet();}
  var t=tot(), sym=A.paidia+A.epiteleio;
  var byM={}; cats.forEach(function(c){var m=masterCat(c.n);byM[m]=(byM[m]||0)+spentOf(c);});
  var order=MASTER_ORDER.filter(function(m){return byM[m]!=null;});
@@ -1549,7 +1551,7 @@ function copyReceipts(){
  var rows=[["Αρ. Απόδειξης","Κατηγορία Εξόδου","Προμηθευτής","Ποσό"]]; var no=0;
  cats.forEach(function(c){c.log.forEach(function(e){
   var parts=(e.parts&&e.parts.length)?e.parts:[{a:e.a,note:""}];
-  parts.forEach(function(p){no++; rows.push([String(no),masterCat(c.n),(e.vendor||e.t||p.note||""),(+p.a||0).toFixed(2)]);});
+  parts.forEach(function(p){no++; rows.push([String(no),(/op/i.test(CLOUD.key||'')?masterCatOP(c.n):masterCat(c.n)),(e.vendor||e.t||p.note||""),(+p.a||0).toFixed(2)]);});
  });});
  rows.push(["","","ΣΥΝΟΛΟ",tot().spent.toFixed(2)]);
  clipWrite(rows,"BUDGET-RECEIPTS αντιγράφηκε — επικόλλησε στο φύλλο αποδείξεων.");
