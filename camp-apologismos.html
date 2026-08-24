@@ -1745,7 +1745,7 @@ async function resetPin(key){var pin=(document.getElementById("homeAdmin").value
 if(!CLOUD.key){showHome();}
 else if(CLOUD.url){document.getElementById("cloudCard").style.display="";updLock();cloudLoad();}
 function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStorage.removeItem(KEY);}catch(e){}location.reload();}}
-/*OVR76-START*/
+//*OVR76-START*/
 ;(function(){
  function f2(x){return (Math.round((+x||0)*100)/100).toFixed(2);}
  function norm(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zα-ω0-9]+/gi,' ').trim();}
@@ -1883,6 +1883,66 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
  editSetup = window.editSetup = function(){ var t=prompt('Τίτλος δράσης:',A.title); if(t===null)return; A.title=t; var d=prompt('Υπότιτλος (ημ/νίες · άτομα · ταμείο):',A.dates); if(d!==null)A.dates=d; var p=parseInt(prompt('Παιδιά/κατασκηνωτές:',A.paidia||0)); if(!isNaN(p))A.paidia=p; var e=parseInt(prompt('Επιτελείο:',A.epiteleio||0)); if(!isNaN(e))A.epiteleio=e; A.all=((+A.paidia||0)+(+A.epiteleio||0))||1; var dk=grf(prompt('Δικαίωμα συμμετοχής (€):',String(A.dikaioma||0).replace('.',','))); if(!isNaN(dk))A.dikaioma=dk; var ln=grf(prompt('Απόθεμα (€ — επιστρεπτέο· 0 αν κανένα):',String(A.loan||0).replace('.',','))); if(!isNaN(ln))A.loan=ln; if(ln){var rl=prompt('Τι είναι το απόθεμα; (π.χ. Ενίσχυση Ε.Π.Σ.):',A.reserveLabel||''); if(rl!==null)A.reserveLabel=rl;} snap(); markDirty(); render(); };
  splitToWallets = window.splitToWallets = function(){ var cashW=wallets.filter(function(w){return w.cash;}); if(!cashW.length){alert('Πρόσθεσε πρώτα ένα cash wallet.');return;} var total=grf(prompt('Συνολικό «στο χέρι» προς μοίρασμα (€):',(handTotal()||''))); if(isNaN(total))return; snap(); var rem=Math.round(total*100)/100; cashW.forEach(function(w,i){ var def=(i===cashW.length-1)?rem:Math.round(total/cashW.length*100)/100; var v=grf(prompt('Στο «'+w.name+'» (€):', String(def).replace('.',','))); if(isNaN(v))v=0; w.opening=Math.round(v*100)/100; rem=Math.round((rem-v)*100)/100; }); if(Math.abs(rem)>=0.01)alert('Προσοχή: έμεινε αμοίραστο '+rem.toFixed(2)+'€.'); markDirty(); render(); };
  pendToPlan = window.pendToPlan = function(i){ var p=pend[i]; if(!p)return; var est=grf(prompt('Εκτιμώμενο ποσό για τα «Επόμενα» (€):','')); snap(); plan.push({day:'Εκκρεμότητα',label:p.t.replace(/^💶\s*/,''),what:'',est:isNaN(est)?0:est,type:'act'}); pend[i].d=true; pend[i].s='done'; markDirty(); render(); };
+ /* ---- Fix: ανέβασμα απόδειξης — σωστό μήνυμα (PIN vs σύνδεση) + auto-PIN + όριο μεγέθους ---- */
+ async function _postUpload(x){ var r=await fetch(CLOUD.url,{method:'POST',body:JSON.stringify({action:'uploadReceipt',key:CLOUD.key,pin:SESSION.pin,admin:SESSION.admin,file:x._file})}); return JSON.parse(await r.text()); }
+ uploadPhoto = window.uploadPhoto = async function(x,name){
+   if(!x||!x._file) return x;
+   if(!CLOUD.url){ return x; }
+   if(name)x._file.name=name;
+   var sizeMB=0; try{ sizeMB=(String(x._file.data||'').length*0.75)/1048576; }catch(e){}
+   for(var i=0;i<3;i++){
+     try{
+       var s=await _postUpload(x);
+       if(s&&s.url){ x.url=s.url; x.fname=x._file.name; delete x._file; delete x._failed; delete x._reason; return x; }
+       if(s&&s.error==='pin-required'){
+         x._reason='pin';
+         if(!window.__uplPinAsk){ window.__uplPinAsk=true; var p=prompt('🔒 Χρειάζεται PIN της δράσης για να ανέβουν οι αποδείξεις:'); window.__uplPinAsk=false; if(p){ SESSION.pin=p; try{localStorage.setItem('apolog_pin_'+CLOUD.key,p);}catch(e){} if(typeof updLock==='function')updLock(); } else { x._failed=true; return x; } }
+         try{ var s2=await _postUpload(x); if(s2&&s2.url){ x.url=s2.url; x.fname=x._file.name; delete x._file; delete x._failed; delete x._reason; return x; } if(s2&&s2.error==='pin-required'){ x._failed=true; x._reason='pin'; return x; } }catch(e){}
+       } else if(s&&s.error){ x._reason=String(s.error); }
+     }catch(e){ x._reason=(sizeMB>7?'size':'net'); }
+     await new Promise(function(res){setTimeout(res,800);});
+   }
+   x._failed=true; if(!x._reason)x._reason=(sizeMB>7?'size':'net');
+   if(x._reason==='size'){ try{ alert('⚠ Το αρχείο «'+(x._file&&x._file.name||'')+'» είναι μεγάλο ('+sizeMB.toFixed(1)+'MB) και δεν ανέβηκε. Δοκίμασε μικρότερο PDF, ένα-ένα, ή φωτογραφία αντί για PDF.'); }catch(e){} }
+   else if(x._reason==='pin'){ try{ alert('🔒 Δεν ανέβηκε: χρειάζεται σωστό PIN της δράσης. Ξεκλείδωσε (🔓) και ξαναδοκίμασε.'); }catch(e){} }
+   return x;
+ };
+ /* ---- Admin panel: πίνακας με ΟΛΟΥΣ τους κωδικούς + PIN (μόνο για admin) ---- */
+ function _esc(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+ function _q(x){ return String(x==null?'':x).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+ window.copyAdminList=function(){ var acts=window.__adminActs||[]; var lines=['Δράση\tΚωδικός\tPIN\tΕνημέρωση']; acts.forEach(function(a){ lines.push([(a.title||a.key),a.key,(a.pin!=null?a.pin:(a.hasPin?'(κρυφό)':'')),(a.updated||'')].join('\t')); }); copyText(lines.join('\n'),'Η λίστα αντιγράφηκε — επικόλλησε σε Sheets/Excel.'); };
+ adminLoad = window.adminLoad = async function(){
+   var pin=(document.getElementById('homeAdmin').value||'').trim(); if(!pin)return;
+   var box=document.getElementById('adminList'); if(!box)return;
+   if(!CLOUD.url){ box.innerHTML='<span style="color:var(--amber)">Δεν έχει οριστεί CLOUD.url (deploy).</span>'; return; }
+   box.innerHTML='⏳…';
+   try{
+     var r=await fetch(CLOUD.url+'?action=list&admin='+encodeURIComponent(pin)+'&t='+Date.now());
+     var s=await r.json();
+     if(!s||!s.ok){ box.innerHTML='<span style="color:var(--red)">Λάθος admin PIN.</span>'; return; }
+     try{sessionStorage.setItem('apolog_admin',pin);}catch(e){}
+     var acts=(s.actions||[]).slice().sort(function(a,b){ return String(b.updated||'').localeCompare(String(a.updated||'')); });
+     window.__adminActs=acts;
+     var backendHasPin=acts.some(function(a){ return a.pin!=null; });
+     var h='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><button class="add-cat" style="width:auto;padding:8px 12px" onclick="newActionUI()">＋ Νέα Δράση</button><button class="pbuy" style="padding:8px 12px" onclick="copyAdminList()">📋 Αντιγραφή λίστας</button><span style="color:var(--muted);font-size:12px">'+acts.length+' δράσεις</span></div>';
+     if(!backendHasPin) h+='<div style="color:var(--amber);font-size:11.5px;margin-bottom:6px;line-height:1.4">ℹ Τα PIN δεν στέλνονται ακόμα από το backend. Ενημέρωσε τη <code>listKeys_</code> (μία γραμμή) ή δες τα στο Sheet (στήλη D).</div>';
+     h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr style="text-align:left;color:var(--muted)"><th style="padding:4px 6px">Δράση</th><th style="padding:4px 6px">Κωδικός</th><th style="padding:4px 6px">PIN</th><th style="padding:4px 6px"></th></tr>';
+     acts.forEach(function(a){
+       var pinCell;
+       if(a.pin!=null){ pinCell = a.pin ? ('<code style="background:#fff6df;padding:1px 6px;border-radius:5px;font-weight:700">'+_esc(a.pin)+'</code> <span title="αντιγραφή" style="cursor:pointer" onclick="copyText(\''+_q(a.pin)+'\',\'PIN αντιγράφηκε\')">📋</span>') : '<small style="color:var(--muted)">χωρίς PIN</small>'; }
+       else { pinCell = a.hasPin ? '🔒' : '<small style="color:var(--muted)">—</small>'; }
+       h+='<tr style="border-top:1px solid var(--line)">'
+         +'<td style="padding:5px 6px"><b style="cursor:pointer" onclick="openKey(\''+_q(a.key)+'\')">'+_esc(a.title||a.key)+'</b>'+(a.pending?' <span style="color:var(--amber)">·'+a.pending+' εκκρ.</span>':'')+'<br><small style="color:var(--muted)">'+_esc(a.updated||'')+'</small></td>'
+         +'<td style="padding:5px 6px"><code>'+_esc(a.key)+'</code> <span title="αντιγραφή" style="cursor:pointer" onclick="copyText(\''+_q(a.key)+'\',\'Κωδικός αντιγράφηκε\')">📋</span></td>'
+         +'<td style="padding:5px 6px">'+pinCell+'</td>'
+         +'<td style="padding:5px 6px;white-space:nowrap"><button class="pbuy" style="padding:4px 8px" onclick="resetPin(\''+_q(a.key)+'\')">✎ PIN</button> <button class="pbuy" style="padding:4px 8px" onclick="openKey(\''+_q(a.key)+'\')">Άνοιγμα</button></td>'
+       +'</tr>';
+     });
+     h+='</table></div>';
+     if(!acts.length)h='<div style="color:var(--muted);font-size:12.5px;margin-top:8px">— καμία δράση ακόμη —</div>';
+     box.innerHTML=h;
+   }catch(e){ box.innerHTML='<span style="color:var(--red)">Σφάλμα σύνδεσης.</span>'; }
+ };
 })();
 /*OVR76-END*/
 </script>
