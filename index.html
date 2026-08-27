@@ -1993,9 +1993,12 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
      var r = await _cl.apply(this,arguments);
      try{
        if(CLOUD&&CLOUD.url&&CLOUD.key){
-         var t=await fetch(CLOUD.url+'?key='+encodeURIComponent(CLOUD.key)+'&t='+Date.now()+Math.random()).then(function(x){return x.text();});
-         var s=JSON.parse(t);
-         if(s&&(s.cats||s.meta)&&Array.isArray(s.logs)){
+         var s=null;
+         for(var i=0;i<4 && !s;i++){
+           try{ var t=await fetch(CLOUD.url+'?key='+encodeURIComponent(CLOUD.key)+'&t='+Date.now()+Math.random()).then(function(x){return x.text();}); var j=JSON.parse(t); if(j&&(j.cats||j.meta)) s=j; }catch(e){}
+           if(!s) await new Promise(function(res){setTimeout(res,700);});
+         }
+         if(s&&Array.isArray(s.logs)){
            chgLog = s.logs;
            if(typeof _snapBase==='function') _snapBase();
            if(typeof renderChangeLog==='function') renderChangeLog();
