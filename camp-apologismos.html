@@ -1943,6 +1943,12 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
      box.innerHTML=h;
    }catch(e){ box.innerHTML='<span style="color:var(--red)">Σφάλμα σύνδεσης.</span>'; }
  };
+ /* ---- Fix: «χωρίς απόδειξη» ανά πληρωμή/απόδειξη (part), όχι μόνο ανά έξοδο ---- */
+ function _hasPh(p){ try{ if(typeof pphotos==='function') return pphotos(p).some(function(x){return x&&(x.url||x._file);}); }catch(e){} return ((p&&p.ph)||[]).some(function(x){return x&&x.url;}); }
+ function _missParts(e){ var parts=(e&&e.parts&&e.parts.length)?e.parts:[{a:(e?e.a:0)}]; var n=0,amt=0; parts.forEach(function(p){ if((+p.a>0)&&!_hasPh(p)){ n++; amt+=(+p.a||0); } }); return {n:n, amt:Math.round(amt*100)/100}; }
+ window._missParts=_missParts;
+ expMatch = window.expMatch = function(e){ if(!expFilter.flag)return true; if(expFilter.flag==='norec')return _missParts(e).n>0; if(expFilter.flag==='unpaid')return !!e.unpaid; return true; };
+ renderMiss = window.renderMiss = function(){ var el=document.getElementById('missBadge'); if(!el)return; var nExp=0,nParts=0,sum=0; (cats||[]).forEach(function(c){ (c.log||[]).forEach(function(e){ var m=_missParts(e); if(m.n>0){ nExp++; nParts+=m.n; sum+=m.amt; } }); }); el.innerHTML = nExp ? ('<span style="color:var(--amber);font-weight:700">📷 '+nExp+' έξοδα με απόδειξη που λείπει'+(nParts>nExp?(' ('+nParts+' αποδείξεις)'):'')+' · '+eur(Math.round(sum*100)/100)+'</span>') : '<span style="color:#2f7d32;font-weight:700">✓ όλες οι πληρωμές έχουν φωτό</span>'; };
 })();
 /*OVR76-END*/
 </script>
