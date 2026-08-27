@@ -1952,6 +1952,20 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
  /* ---- Fix: (α) «Κάμερα» → και βιβλιοθήκη (χωρίς forced capture)· (β) σήμανση ΜΟΝΟ της γραμμής-απόδειξης που λείπει φωτό ---- */
  function _stripCapture(root){ try{ (root||document).querySelectorAll('input[capture]').forEach(function(i){ i.removeAttribute('capture'); }); }catch(e){} }
  (function(){ if(typeof renderParts==='function'){ var _rp=renderParts; renderParts = window.renderParts = function(){ var r=_rp.apply(this,arguments); try{ var box=document.getElementById('mParts'); if(box){ _stripCapture(box); if(typeof M!=='undefined'&&M&&M.parts){ var rows=box.querySelectorAll('.prow2'); M.parts.forEach(function(p,i){ var row=rows[i]; if(!row)return; var has=(typeof pphotos==='function')&&pphotos(p).some(function(x){return x&&(x.url||x._file);}); if((+p.a>0)&&!has&&!row.querySelector('.missflag')){ var s=document.createElement('span'); s.className='missflag'; s.style.cssText='flex-basis:100%;color:var(--amber);font-weight:700;font-size:11.5px;margin-top:2px'; s.textContent='⚠ λείπει απόδειξη/φωτό'; row.appendChild(s); } }); } } }catch(e){} return r; }; } })();
+ (function(){ if(typeof renderReport==='function'){ var _rr=renderReport; renderReport = window.renderReport = function(){ var r=_rr.apply(this,arguments); try{
+   var box=document.getElementById('rInline'); if(!box) return r;
+   var hs=box.querySelectorAll('h4'), target=null;
+   for(var i=0;i<hs.length;i++){ if(/Χωρίς φωτό/.test(hs[i].textContent||'')){ target=hs[i]; break; } }
+   if(!target) return r;
+   var items=[], sum=0;
+   (cats||[]).forEach(function(c){ (c.log||[]).forEach(function(e){ var parts=(e.parts&&e.parts.length)?e.parts:[{a:e.a,note:''}]; parts.forEach(function(p,pi){ var has=(typeof pphotos==='function')&&pphotos(p).some(function(x){return x&&(x.url||x._file);}); if((+p.a>0)&&!has){ items.push({iso:isoOf(e),cat:c.n,vendor:(e.vendor||e.t||''),note:(p.note||''),a:(+p.a||0),tag:(parts.length>1?('απόδ. '+(pi+1)+'/'+parts.length):'')}); sum+=(+p.a||0); } }); }); });
+   items.sort(function(a,b){var x=a.iso||'9999-99-99',y=b.iso||'9999-99-99';return x<y?-1:x>y?1:0;});
+   var nh='<h4>Χωρίς φωτό απόδειξης <span style="font-weight:400;color:var(--muted)">('+items.length+' αποδείξεις · '+eur(Math.round(sum*100)/100)+')</span></h4>';
+   if(!items.length){ nh+='<div style="color:#2f7d32;font-weight:700;font-size:12.5px">✓ Όλες οι αποδείξεις/πληρωμές έχουν φωτό.</div>'; }
+   else { nh+='<div class="tscroll"><table><tr><th>Ημ/νία</th><th>Τι / πού</th><th>Κατηγορία</th><th class="n">Ποσό</th></tr>'; items.forEach(function(it){ var lbl=esc(it.vendor)+((it.tag||it.note)?(' <small style="color:var(--muted)">'+[it.tag,esc(it.note)].filter(Boolean).join(' · ')+'</small>'):''); nh+='<tr><td>'+ddmm(it.iso)+'</td><td>'+lbl+'</td><td>'+esc(it.cat)+'</td><td class="n">'+eur(it.a)+'</td></tr>'; }); nh+='</table></div>'; }
+   var rm=[], cur=target.nextElementSibling; while(cur&&cur.tagName!=='H4'){ rm.push(cur); cur=cur.nextElementSibling; } rm.forEach(function(x){x.remove();});
+   target.outerHTML=nh;
+ }catch(e){} return r; }; } })();
  _stripCapture(document);
 })();
 /*OVR76-END*/
