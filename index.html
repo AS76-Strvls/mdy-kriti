@@ -1966,6 +1966,26 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
    var rm=[], cur=target.nextElementSibling; while(cur&&cur.tagName!=='H4'){ rm.push(cur); cur=cur.nextElementSibling; } rm.forEach(function(x){x.remove();});
    target.outerHTML=nh;
  }catch(e){} return r; }; } })();
+ /* ---- Fix: το merge (α) ΔΕΝ χάνει συνδεδεμένες αποδείξεις-φωτό, (β) ΔΕΝ σβήνει entry σε delete/edit conflict ---- */
+ (function(){ if(typeof mergeStates!=='function'||typeof _idMap!=='function') return;
+   function _pu(e){ var o=[]; ((e&&e.parts)||[]).forEach(function(p){ ((p&&p.ph)||[]).forEach(function(x){ if(x&&x.url) o.push(x.url); }); }); return o; }
+   function _attach(e,urls){ if(!urls.length)return; e.parts=(e.parts&&e.parts.length)?e.parts:[{a:(+e.a||0),note:''}]; var p0=e.parts[0]; p0.ph=p0.ph||[]; var have={}; p0.ph.forEach(function(x){ if(x&&x.url)have[x.url]=1; }); urls.forEach(function(u){ if(!have[u]){ p0.ph.push({url:u,fname:''}); have[u]=1; } }); }
+   function _fc(out,n){ for(var i=0;i<out.cats.length;i++) if(out.cats[i].n===n) return out.cats[i]; var nc={n:n,log:[]}; out.cats.push(nc); return nc; }
+   var _om=mergeStates;
+   mergeStates=window.mergeStates=function(base,mine,server){
+     var out=_om(base,mine,server);
+     try{
+       if(!out||!out.cats||!server) return out;
+       var bM=_idMap(base||{}), mM=_idMap(mine||{}), sM=_idMap(server), oM=_idMap(out);
+       /* (β) restore entries που το merge έσβησε αλλά ο server τα ΑΛΛΑΞΕ μετά το base (άλλη συσκευή τα δούλευε) */
+       Object.keys(sM).forEach(function(id){ if(oM[id])return; var sv=sM[id].e; var changed=!bM[id]||JSON.stringify(bM[id].e)!==JSON.stringify(sv); if(changed){ _fc(out,sM[id].cat).log.push(JSON.parse(JSON.stringify(sv))); } });
+       /* (α) κράτα ΝΕΕΣ φωτό (που δεν ήταν στο base) από server ή mine, ώστε να μη χάνεται απόδειξη */
+       oM=_idMap(out);
+       Object.keys(oM).forEach(function(id){ var have=_pu(oM[id].e); var baseUrls=bM[id]?_pu(bM[id].e):[]; var cand=[]; [sM[id],mM[id]].forEach(function(x){ if(x)_pu(x.e).forEach(function(u){cand.push(u);}); }); var extra=cand.filter(function(u,i){ return cand.indexOf(u)===i && have.indexOf(u)<0 && baseUrls.indexOf(u)<0; }); if(extra.length) _attach(oM[id].e, extra); });
+     }catch(e){}
+     return out;
+   };
+ })();
  _stripCapture(document);
 })();
 /*OVR76-END*/
