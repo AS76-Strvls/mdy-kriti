@@ -1949,6 +1949,10 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
  window._missParts=_missParts;
  expMatch = window.expMatch = function(e){ if(!expFilter.flag)return true; if(expFilter.flag==='norec')return _missParts(e).n>0; if(expFilter.flag==='unpaid')return !!e.unpaid; return true; };
  renderMiss = window.renderMiss = function(){ var el=document.getElementById('missBadge'); if(!el)return; var nExp=0,nParts=0,sum=0; (cats||[]).forEach(function(c){ (c.log||[]).forEach(function(e){ var m=_missParts(e); if(m.n>0){ nExp++; nParts+=m.n; sum+=m.amt; } }); }); el.innerHTML = nExp ? ('<span style="color:var(--amber);font-weight:700">📷 '+nExp+' έξοδα με απόδειξη που λείπει'+(nParts>nExp?(' ('+nParts+' αποδείξεις)'):'')+' · '+eur(Math.round(sum*100)/100)+'</span>') : '<span style="color:#2f7d32;font-weight:700">✓ όλες οι πληρωμές έχουν φωτό</span>'; };
+ /* ---- Fix: (α) «Κάμερα» → και βιβλιοθήκη (χωρίς forced capture)· (β) σήμανση ΜΟΝΟ της γραμμής-απόδειξης που λείπει φωτό ---- */
+ function _stripCapture(root){ try{ (root||document).querySelectorAll('input[capture]').forEach(function(i){ i.removeAttribute('capture'); }); }catch(e){} }
+ (function(){ if(typeof renderParts==='function'){ var _rp=renderParts; renderParts = window.renderParts = function(){ var r=_rp.apply(this,arguments); try{ var box=document.getElementById('mParts'); if(box){ _stripCapture(box); if(typeof M!=='undefined'&&M&&M.parts){ var rows=box.querySelectorAll('.prow2'); M.parts.forEach(function(p,i){ var row=rows[i]; if(!row)return; var has=(typeof pphotos==='function')&&pphotos(p).some(function(x){return x&&(x.url||x._file);}); if((+p.a>0)&&!has&&!row.querySelector('.missflag')){ var s=document.createElement('span'); s.className='missflag'; s.style.cssText='flex-basis:100%;color:var(--amber);font-weight:700;font-size:11.5px;margin-top:2px'; s.textContent='⚠ λείπει απόδειξη/φωτό'; row.appendChild(s); } }); } } }catch(e){} return r; }; } })();
+ _stripCapture(document);
 })();
 /*OVR76-END*/
 </script>
