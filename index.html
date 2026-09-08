@@ -2008,29 +2008,21 @@ function reset(){if(confirm("Επαναφορά αρχικών;")){try{localStor
      return out;
    };
  })();
- /* ---- Fix: φόρτωσε το ιστορικό αλλαγών (logs) από τον server → δίχτυ ανάκτησης «↩ Ανάκτηση» ---- */
- (function(){ if(typeof cloudLoad!=='function') return;
-   var _cl=cloudLoad;
-   cloudLoad = window.cloudLoad = async function(){
-     var r = await _cl.apply(this,arguments);
-     try{
-       if(CLOUD&&CLOUD.url&&CLOUD.key){
-         var s=null;
-         for(var i=0;i<4 && !s;i++){
-           try{ var t=await fetch(CLOUD.url+'?key='+encodeURIComponent(CLOUD.key)+'&t='+Date.now()+Math.random()).then(function(x){return x.text();}); var j=JSON.parse(t); if(j&&(j.cats||j.meta)) s=j; }catch(e){}
-           if(!s) await new Promise(function(res){setTimeout(res,700);});
-         }
-         if(s&&Array.isArray(s.logs)){
-           chgLog = s.logs;
-           if(typeof _snapBase==='function') _snapBase();
-           if(typeof renderChangeLog==='function') renderChangeLog();
-         }
-       }
-     }catch(e){}
-     return r;
-   };
- })();
+ /* ---- Fix: cloudLoad αξιόπιστο — φορτώνει logs (ιστορικό/ανάκτηση) ΚΑΙ ορίζει BASE από το ΙΔΙΟ επιτυχές fetch ---- */
+ if(typeof cloudLoad==='function'){ cloudLoad = window.cloudLoad = async function(){
+   if(!CLOUD.url){return;}
+   if(dirty&&!confirm("Έχεις αλλαγές που ΔΕΝ αποθηκεύτηκαν στο κοινό ταμείο. Η φόρτωση θα τις αντικαταστήσει. Συνέχεια;"))return;
+   cstat("⏳ Φόρτωση από το κοινό ταμείο…");
+   var s=null;
+   for(var i=0;i<5;i++){ try{var t=await fetch(CLOUD.url+"?key="+encodeURIComponent(CLOUD.key)+"&t="+Date.now()+Math.random()).then(function(r){return r.text();});var j=JSON.parse(t);if(j&&(j.cats||j.meta||j.ping!=null)){s=j;break;}}catch(e){} await new Promise(function(x){setTimeout(x,700);}); }
+   if(s===null){cstat("⚠️ Δεν φόρτωσε — ασταθής σύνδεση. Πάτα ↻ Φόρτωση ξανά.");return;}
+   if(s&&(s.cats||s.meta)){cats=s.cats||cats;pend=s.pend||pend;plan=s.plan||plan;if(s.CATBUD)CATBUD=s.CATBUD;if(s.wallets)wallets=s.wallets;if(s.transfers)transfers=s.transfers;if(s.income)income=s.income;if(s.INCBUD)INCBUD=s.INCBUD;subs=s.subs||[];if(s.counted!=null)counted=s.counted;if(s.close)close=s.close;if(Array.isArray(s.logs))chgLog=s.logs;metaIn(s.meta);ensureIds();_snapBase();clearDirty();save();render();if(typeof renderChangeLog==='function')renderChangeLog();
+   cstat("✅ Φορτώθηκε το κοινό ταμείο <span style='color:var(--muted);font-weight:400'>"+new Date().toLocaleTimeString("el-GR")+"</span>");}
+   else{ if(typeof notFoundUI==='function')notFoundUI(); }
+ }; }
  _stripCapture(document);
+ /* το αρχικό cloudLoad έτρεξε πριν οριστεί το νέο (χωρίς logs/BASE) → ξανα-φόρτωσε μία φορά αν λείπει το ιστορικό */
+ try{ if(CLOUD&&CLOUD.url&&CLOUD.key){ setTimeout(function(){ try{ if((typeof chgLog==='undefined')||!chgLog||!chgLog.length){ cloudLoad(); } }catch(e){} }, 1500); } }catch(e){}
 })();
 /*OVR76-END*/
 </script>
